@@ -137,9 +137,14 @@ install(FILES
   DESTINATION "${INSTALL_SHARE_DIR}/metainfo"
   COMPONENT Runtime)
 
-install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/../web/icons/Icon-512.png"
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/../assets/images/logo.png"
   DESTINATION "${INSTALL_SHARE_DIR}/icons/hicolor/512x512/apps"
   RENAME "${BINARY_NAME}.png"
+  COMPONENT Runtime)
+
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/../assets/images/logo.png"
+  DESTINATION "${CMAKE_INSTALL_PREFIX}"
+  RENAME "vaultwash-icon.png"
   COMPONENT Runtime)
 
 # Install the AOT library on non-Debug builds only.
