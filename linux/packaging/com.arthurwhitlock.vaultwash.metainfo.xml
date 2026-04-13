@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.arthurwhitlock.vaultwash</id>
+  <name>VaultWash</name>
+  <summary>Clean broken citation artifacts from Obsidian vaults</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <developer_name>Arthur Whitlock</developer_name>
+  <launchable type="desktop-id">vaultwash.desktop</launchable>
+  <description>
+    <p>
+      VaultWash scans Obsidian vaults, previews broken citation artifacts such as
+      :contentReference[oaicite:...]{...}, and cleans approved files safely with
+      optional backup copies.
+    </p>
+  </description>
+  <categories>
+    <category>Utility</category>
+    <category>Office</category>
+  </categories>
+</component>

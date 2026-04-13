@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=VaultWash
+Comment=Clean broken citation artifacts from Obsidian vaults
+Exec=@BINARY_NAME@
+Icon=@BINARY_NAME@
+Terminal=false
+Categories=Utility;Office;TextTools;
+Keywords=obsidian;markdown;cleanup;citations;
+StartupWMClass=VaultWash
