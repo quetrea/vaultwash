@@ -778,6 +778,10 @@ class _MinimumWidthNotice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final minWidth = WorkspaceLayoutSpec.compactMinWidth;
+    final formattedMinWidth = minWidth.truncateToDouble() == minWidth
+        ? minWidth.toStringAsFixed(0)
+        : minWidth.toString();
 
     return AppSurfaceCard(
       padding: const EdgeInsets.symmetric(
@@ -795,7 +799,7 @@ class _MinimumWidthNotice extends StatelessWidget {
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
-              'VaultWash is tuned for desktop widths of 960 px or wider. Widen the window or scroll horizontally to keep the full review workspace visible.',
+              'VaultWash is tuned for desktop widths of $formattedMinWidth px or wider. Widen the window or scroll horizontally to keep the full review workspace visible.',
               style: Theme.of(
                 context,
               ).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
