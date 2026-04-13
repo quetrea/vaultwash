@@ -12,14 +12,16 @@ class VaultWashApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final settings = ref.watch(appSettingsControllerProvider);
+    final appearanceMode = ref.watch(
+      appSettingsControllerProvider.select((s) => s.appearanceMode),
+    );
 
     return MaterialApp(
       title: AppStrings.windowTitle,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
-      themeMode: switch (settings.appearanceMode) {
+      themeMode: switch (appearanceMode) {
         AppAppearanceMode.system => ThemeMode.system,
         AppAppearanceMode.light => ThemeMode.light,
         AppAppearanceMode.dark => ThemeMode.dark,

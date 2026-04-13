@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:vaultwash/app/theme/app_tokens.dart';
+import 'package:vaultwash/core/widgets/app_badge.dart';
 import 'package:vaultwash/core/widgets/app_section_header.dart';
 import 'package:vaultwash/core/widgets/app_surface_card.dart';
 import 'package:vaultwash/features/scan/domain/scan_summary.dart';
@@ -38,7 +39,7 @@ class ScanSummaryCard extends StatelessWidget {
             subtitle: lastScannedAt == null
                 ? 'Run a scan to inspect markdown files and review changes before cleanup.'
                 : 'Last scanned at ${_formatTime(lastScannedAt!)}',
-            trailing: _SummaryBadge(
+            trailing: AppBadge(
               label: lastScannedAt == null
                   ? 'Awaiting scan'
                   : '$affectedFiles affected',
@@ -120,35 +121,6 @@ class _SummaryMetric extends StatelessWidget {
             ).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _SummaryBadge extends StatelessWidget {
-  const _SummaryBadge({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: colors.surfaceMuted,
-        borderRadius: AppRadius.sm,
-        border: Border.all(color: colors.border),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(
-          context,
-        ).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
       ),
     );
   }

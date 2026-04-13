@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:vaultwash/app/theme/app_tokens.dart';
+import 'package:vaultwash/core/widgets/app_badge.dart';
 import 'package:vaultwash/core/widgets/app_section_header.dart';
 import 'package:vaultwash/core/widgets/empty_state_view.dart';
 import 'package:vaultwash/features/scan/domain/scan_file_result.dart';
@@ -32,7 +33,7 @@ class AffectedFilesList extends StatelessWidget {
               : '${files.length} markdown files are ready for preview before cleanup.',
           trailing: files.isEmpty
               ? null
-              : _PanelBadge(label: '${selectedPaths.length} selected'),
+              : AppBadge(label: '${selectedPaths.length} selected'),
         ),
         const SizedBox(height: AppSpacing.md),
         Expanded(
@@ -125,7 +126,7 @@ class AffectedFilesList extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(width: AppSpacing.sm),
-                              _PanelBadge(
+                              AppBadge(
                                 label:
                                     '${file.matchCount} match${file.matchCount == 1 ? '' : 'es'}',
                               ),
@@ -138,35 +139,6 @@ class AffectedFilesList extends StatelessWidget {
                 ),
         ),
       ],
-    );
-  }
-}
-
-class _PanelBadge extends StatelessWidget {
-  const _PanelBadge({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: colors.surfaceMuted,
-        borderRadius: AppRadius.sm,
-        border: Border.all(color: colors.border),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(
-          context,
-        ).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
-      ),
     );
   }
 }

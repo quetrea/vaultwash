@@ -33,16 +33,20 @@ class OnboardingLocalDataSource {
     try {
       final documentsDirectory = await getApplicationDocumentsDirectory();
       if (documentsDirectory.path.trim().isNotEmpty) {
-        return Directory(
+        final preferred = Directory(
           p.join(documentsDirectory.path, AppStrings.appName, 'state'),
         );
+        await preferred.create(recursive: true);
+        return preferred;
       }
-    } catch (_) {
+    } on Exception {
       // Fall back to an application-owned directory below.
     }
 
     final supportDirectory = await getApplicationSupportDirectory();
-    return Directory(p.join(supportDirectory.path, 'state'));
+    final fallback = Directory(p.join(supportDirectory.path, 'state'));
+    await fallback.create(recursive: true);
+    return fallback;
   }
 
   Future<OnboardingStatus> load() async {

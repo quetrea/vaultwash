@@ -42,7 +42,10 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final isCompact = constraints.maxWidth < 1180;
-            final railHeight = constraints.maxHeight - (AppSpacing.lg * 2);
+            final railHeight =
+                constraints.maxHeight > AppSpacing.lg * 2
+                    ? constraints.maxHeight - (AppSpacing.lg * 2)
+                    : 0.0;
 
             if (isCompact) {
               return SingleChildScrollView(

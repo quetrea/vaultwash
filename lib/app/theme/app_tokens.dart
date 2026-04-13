@@ -177,7 +177,15 @@ class AppColors extends ThemeExtension<AppColors> {
 }
 
 extension AppThemeContext on BuildContext {
-  AppColors get appColors => Theme.of(this).extension<AppColors>()!;
+  AppColors get appColors {
+    final theme = Theme.of(this);
+    final colors = theme.extension<AppColors>();
+    assert(colors != null, 'AppColors is missing from ThemeData.extensions');
+    return colors ??
+        (theme.brightness == Brightness.dark
+            ? AppColors.dark
+            : AppColors.light);
+  }
 }
 
 abstract final class AppSpacing {

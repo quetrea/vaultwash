@@ -3,7 +3,11 @@ enum AppAppearanceMode {
   light,
   dark;
 
-  String get storageValue => name;
+  String get storageValue => switch (this) {
+    AppAppearanceMode.system => 'system',
+    AppAppearanceMode.light => 'light',
+    AppAppearanceMode.dark => 'dark',
+  };
 
   String get label => switch (this) {
     AppAppearanceMode.system => 'System',

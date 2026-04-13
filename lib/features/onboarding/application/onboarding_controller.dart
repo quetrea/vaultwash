@@ -14,9 +14,13 @@ class OnboardingController extends AsyncNotifier<OnboardingStatus> {
   }
 
   Future<void> complete() async {
-    final next = await ref
-        .read(onboardingLocalDataSourceProvider)
-        .markCompleted();
-    state = AsyncData(next);
+    try {
+      final next = await ref
+          .read(onboardingLocalDataSourceProvider)
+          .markCompleted();
+      state = AsyncData(next);
+    } catch (e, st) {
+      state = AsyncError(e, st);
+    }
   }
 }
