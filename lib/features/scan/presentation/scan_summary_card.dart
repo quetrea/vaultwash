@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:vaultwash/app/theme/app_tokens.dart';
+import 'package:vaultwash/core/widgets/app_badge.dart';
 import 'package:vaultwash/core/widgets/app_section_header.dart';
 import 'package:vaultwash/core/widgets/app_surface_card.dart';
 import 'package:vaultwash/features/scan/domain/scan_summary.dart';
@@ -20,55 +21,68 @@ class ScanSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final textTheme = Theme.of(context).textTheme;
+    final effectiveSummary = summary;
+    final filesScanned = effectiveSummary?.totalFilesScanned ?? 0;
+    final affectedFiles = effectiveSummary?.filesWithMatches ?? 0;
+    final totalMatches = effectiveSummary?.totalMatchesFound ?? 0;
+    final failures = effectiveSummary?.failureCount ?? 0;
 
     return AppSurfaceCard(
+      showShadow: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           AppSectionHeader(
-            title: 'Current scan',
+            title: 'Scan summary',
             subtitle: lastScannedAt == null
-                ? 'No scan has been run yet.'
+                ? 'Run a scan to inspect markdown files and review changes before cleanup.'
                 : 'Last scanned at ${_formatTime(lastScannedAt!)}',
+            trailing: AppBadge(
+              label: lastScannedAt == null
+                  ? 'Awaiting scan'
+                  : '$affectedFiles affected',
+            ),
           ),
           const SizedBox(height: AppSpacing.md),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: [
-              _SummaryMetric(
-                label: 'Markdown scanned',
-                value: '${summary?.totalFilesScanned ?? 0}',
-              ),
-              _SummaryMetric(
-                label: 'Files to review',
-                value: '${summary?.filesWithMatches ?? 0}',
-              ),
-              _SummaryMetric(
-                label: 'Artifacts found',
-                value: '${summary?.totalMatchesFound ?? 0}',
-              ),
-              _SummaryMetric(
-                label: 'Read failures',
-                value: '${summary?.failureCount ?? 0}',
-              ),
-            ],
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            decoration: BoxDecoration(
+              color: colors.surfaceMuted,
+              borderRadius: AppRadius.sm,
+              border: Border.all(color: colors.border),
+            ),
+            child: Wrap(
+              spacing: AppSpacing.md,
+              runSpacing: AppSpacing.md,
+              children: [
+                _SummaryMetric(label: 'Markdown files', value: '$filesScanned'),
+                _SummaryMetric(
+                  label: 'Affected files',
+                  value: '$affectedFiles',
+                ),
+                _SummaryMetric(
+                  label: 'Artifacts found',
+                  value: '$totalMatches',
+                ),
+                _SummaryMetric(label: 'Unreadable files', value: '$failures'),
+              ],
+            ),
           ),
           if (statusMessage != null) ...[
             const SizedBox(height: AppSpacing.md),
             Text(
               statusMessage!,
-              style: textTheme.bodySmall?.copyWith(
-                color: AppColors.textSecondary,
-              ),
+              style: textTheme.bodySmall?.copyWith(color: colors.textSecondary),
             ),
           ],
           if (errorMessage != null) ...[
             const SizedBox(height: AppSpacing.xs),
             Text(
               errorMessage!,
-              style: textTheme.bodySmall?.copyWith(color: AppColors.danger),
+              style: textTheme.bodySmall?.copyWith(color: colors.danger),
             ),
           ],
         ],
@@ -91,20 +105,21 @@ class _SummaryMetric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final colors = context.appColors;
+
+    return SizedBox(
       width: 150,
-      padding: const EdgeInsets.all(AppSpacing.sm),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceRaised,
-        borderRadius: AppRadius.sm,
-        border: Border.all(color: AppColors.border),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(value, style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: AppSpacing.xxs),
-          Text(label, style: Theme.of(context).textTheme.bodySmall),
+          Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
+          ),
         ],
       ),
     );

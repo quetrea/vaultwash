@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:vaultwash/features/settings/domain/app_appearance_mode.dart';
 import 'package:vaultwash/features/settings/domain/app_settings.dart';
 import 'package:vaultwash/features/settings/infrastructure/settings_local_data_source.dart';
 
@@ -36,6 +37,10 @@ class AppSettingsController extends Notifier<AppSettings> {
 
   Future<void> setExcludeHiddenFolders(bool enabled) async {
     await _persist(state.copyWith(excludeHiddenFolders: enabled));
+  }
+
+  Future<void> setAppearanceMode(AppAppearanceMode mode) async {
+    await _persist(state.copyWith(appearanceMode: mode));
   }
 
   Future<void> setRuleEnabled(String ruleId, bool enabled) async {

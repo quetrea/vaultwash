@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:vaultwash/app/app_strings.dart';
 import 'package:vaultwash/app/theme/app_tokens.dart';
 import 'package:vaultwash/core/widgets/app_button.dart';
-import 'package:vaultwash/core/widgets/app_input.dart';
 import 'package:vaultwash/core/widgets/app_section_header.dart';
 import 'package:vaultwash/features/vault/domain/vault_ref.dart';
 
@@ -22,18 +20,75 @@ class VaultSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final textTheme = Theme.of(context).textTheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const AppSectionHeader(
           title: 'Vault',
-          subtitle: 'Select the Obsidian vault you want VaultWash to review.',
+          subtitle: 'Choose the Obsidian vault you want VaultWash to inspect.',
         ),
         const SizedBox(height: AppSpacing.sm),
-        AppInput(
-          value: vault?.absolutePath,
-          placeholder: 'No vault selected yet',
-          maxLines: 2,
+        Tooltip(
+          message: vault?.absolutePath ?? 'No vault selected yet',
+          waitDuration: const Duration(milliseconds: 400),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            decoration: BoxDecoration(
+              color: colors.surfaceRaised,
+              borderRadius: AppRadius.sm,
+              border: Border.all(color: colors.border),
+            ),
+            child: vault == null
+                ? Row(
+                    children: [
+                      _VaultIcon(colors: colors, icon: Icons.folder_outlined),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          'No vault selected yet',
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: colors.textMuted,
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          _VaultIcon(
+                            colors: colors,
+                            icon: Icons.folder_open_rounded,
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: Text(
+                              vault!.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: textTheme.titleSmall,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        vault!.absolutePath,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
         ),
         const SizedBox(height: AppSpacing.sm),
         Row(
@@ -61,12 +116,31 @@ class VaultSelector extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(
-          AppStrings.tagline,
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+          'VaultWash scans markdown files recursively and never writes during the scan.',
+          style: textTheme.bodySmall?.copyWith(color: colors.textMuted),
         ),
       ],
+    );
+  }
+}
+
+class _VaultIcon extends StatelessWidget {
+  const _VaultIcon({required this.colors, required this.icon});
+
+  final AppColors colors;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        color: colors.surfaceMuted,
+        borderRadius: AppRadius.sm,
+        border: Border.all(color: colors.border),
+      ),
+      child: Icon(icon, size: 18, color: colors.textSecondary),
     );
   }
 }

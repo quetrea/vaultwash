@@ -15,6 +15,7 @@ class AppInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final textTheme = Theme.of(context).textTheme;
     final displayValue = value?.trim().isNotEmpty == true
         ? value!.trim()
@@ -27,9 +28,9 @@ class AppInput extends StatelessWidget {
         vertical: AppSpacing.sm,
       ),
       decoration: BoxDecoration(
-        color: AppColors.surfaceRaised,
+        color: colors.surfaceRaised,
         borderRadius: AppRadius.sm,
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: colors.border),
       ),
       child: Text(
         displayValue ?? placeholder,
@@ -37,7 +38,7 @@ class AppInput extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
         style:
             (displayValue == null
-                    ? textTheme.bodyMedium?.copyWith(color: AppColors.textMuted)
+                    ? textTheme.bodyMedium?.copyWith(color: colors.textMuted)
                     : textTheme.bodyMedium)
                 ?.copyWith(height: 1.4),
       ),

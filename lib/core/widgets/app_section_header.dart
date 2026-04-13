@@ -15,6 +15,7 @@ class AppSectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final textTheme = Theme.of(context).textTheme;
 
     return Row(
@@ -30,7 +31,7 @@ class AppSectionHeader extends StatelessWidget {
                 Text(
                   value,
                   style: textTheme.bodySmall?.copyWith(
-                    color: AppColors.textSecondary,
+                    color: colors.textSecondary,
                   ),
                 ),
               ],
