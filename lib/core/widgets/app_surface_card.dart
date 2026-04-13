@@ -8,20 +8,25 @@ class AppSurfaceCard extends StatelessWidget {
     this.padding = const EdgeInsets.all(AppSpacing.md),
     this.backgroundColor,
     this.borderRadius,
+    this.showShadow = false,
   });
 
   final Widget child;
   final EdgeInsetsGeometry padding;
   final Color? backgroundColor;
   final BorderRadius? borderRadius;
+  final bool showShadow;
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+
     return Container(
       decoration: BoxDecoration(
-        color: backgroundColor ?? AppColors.surface,
+        color: backgroundColor ?? colors.surface,
         borderRadius: borderRadius ?? AppRadius.md,
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: colors.border),
+        boxShadow: showShadow ? AppShadows.surface(colors) : null,
       ),
       child: Padding(padding: padding, child: child),
     );

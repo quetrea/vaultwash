@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:vaultwash/app/theme/app_theme.dart';
 import 'package:vaultwash/features/settings/infrastructure/settings_local_data_source.dart';
 import 'package:vaultwash/features/settings/presentation/settings_dialog.dart';
 
@@ -22,12 +23,20 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [sharedPreferencesProvider.overrideWithValue(preferences)],
-        child: const MaterialApp(home: Scaffold(body: SettingsDialog())),
+        child: MaterialApp(
+          theme: AppTheme.light(),
+          darkTheme: AppTheme.dark(),
+          home: const Scaffold(body: SettingsDialog()),
+        ),
       ),
     );
     await tester.pumpAndSettle();
 
     expect(find.text('Settings'), findsOneWidget);
+    expect(find.text('Appearance'), findsOneWidget);
+    expect(find.text('System'), findsOneWidget);
+    expect(find.text('Light'), findsOneWidget);
+    expect(find.text('Dark'), findsOneWidget);
     expect(find.text('Exclude .obsidian/'), findsOneWidget);
     expect(find.text('Exclude hidden folders'), findsOneWidget);
     expect(

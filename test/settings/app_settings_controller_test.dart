@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vaultwash/features/settings/application/app_settings_controller.dart';
+import 'package:vaultwash/features/settings/domain/app_appearance_mode.dart';
 import 'package:vaultwash/features/settings/infrastructure/settings_local_data_source.dart';
 
 void main() {
@@ -15,6 +16,7 @@ void main() {
         'settings.create_backups': false,
         'settings.exclude_obsidian': true,
         'settings.exclude_hidden_folders': false,
+        'settings.appearance_mode': 'dark',
         'settings.enabled_rule_ids': <String>['oaicite_content_reference'],
       });
 
@@ -29,6 +31,7 @@ void main() {
       expect(initial.createBackupsBeforeWrite, isFalse);
       expect(initial.excludeObsidian, isTrue);
       expect(initial.excludeHiddenFolders, isFalse);
+      expect(initial.appearanceMode, AppAppearanceMode.dark);
 
       await container
           .read(appSettingsControllerProvider.notifier)
@@ -36,9 +39,13 @@ void main() {
       await container
           .read(appSettingsControllerProvider.notifier)
           .setCreateBackupsBeforeWrite(true);
+      await container
+          .read(appSettingsControllerProvider.notifier)
+          .setAppearanceMode(AppAppearanceMode.system);
 
       expect(preferences.getBool('settings.exclude_hidden_folders'), isTrue);
       expect(preferences.getBool('settings.create_backups'), isTrue);
+      expect(preferences.getString('settings.appearance_mode'), 'system');
     },
   );
 }

@@ -1,11 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:vaultwash/features/settings/domain/app_appearance_mode.dart';
 import 'package:vaultwash/features/settings/domain/app_settings.dart';
 
 const _lastVaultPathKey = 'settings.last_vault_path';
 const _createBackupsKey = 'settings.create_backups';
 const _excludeObsidianKey = 'settings.exclude_obsidian';
 const _excludeHiddenFoldersKey = 'settings.exclude_hidden_folders';
+const _appearanceModeKey = 'settings.appearance_mode';
 const _enabledRuleIdsKey = 'settings.enabled_rule_ids';
 
 final sharedPreferencesProvider = Provider<SharedPreferences>(
@@ -33,6 +35,9 @@ class AppSettingsLocalDataSource {
       excludeObsidian: _preferences.getBool(_excludeObsidianKey) ?? true,
       excludeHiddenFolders:
           _preferences.getBool(_excludeHiddenFoldersKey) ?? false,
+      appearanceMode: AppAppearanceMode.fromStorageValue(
+        _preferences.getString(_appearanceModeKey),
+      ),
       enabledRuleIds: enabledRuleIds,
     );
   }
@@ -52,6 +57,10 @@ class AppSettingsLocalDataSource {
     await _preferences.setBool(
       _excludeHiddenFoldersKey,
       settings.excludeHiddenFolders,
+    );
+    await _preferences.setString(
+      _appearanceModeKey,
+      settings.appearanceMode.storageValue,
     );
     await _preferences.setStringList(
       _enabledRuleIdsKey,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vaultwash/app/theme/app_theme.dart';
 import 'package:vaultwash/features/cleanup/domain/cleanup_preview.dart';
 import 'package:vaultwash/features/cleanup/presentation/preview_panel.dart';
 import 'package:vaultwash/features/scan/domain/scan_file_result.dart';
@@ -45,6 +46,8 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
         home: Scaffold(
           body: Row(
             children: [
@@ -76,7 +79,8 @@ void main() {
     );
 
     expect(find.text('notes/chapter.md'), findsNWidgets(2));
-    expect(find.text('Change preview'), findsOneWidget);
+    expect(find.text('Affected files'), findsOneWidget);
+    expect(find.text('Preview'), findsOneWidget);
     expect(find.text('Before'), findsOneWidget);
     expect(find.text('After'), findsOneWidget);
     expect(find.textContaining('contentReference'), findsWidgets);

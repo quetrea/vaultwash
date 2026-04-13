@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:vaultwash/features/onboarding/presentation/onboarding_gate.dart';
 import 'package:vaultwash/features/scan/presentation/workspace_screen.dart';
 
 abstract final class AppRouter {
@@ -9,7 +10,7 @@ abstract final class AppRouter {
       case workspace:
       default:
         return MaterialPageRoute<void>(
-          builder: (_) => const WorkspaceScreen(),
+          builder: (_) => const OnboardingGate(child: WorkspaceScreen()),
           settings: settings,
         );
     }

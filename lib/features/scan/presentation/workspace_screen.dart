@@ -34,12 +34,15 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
     final workspace = scanState.asData?.value ?? const ScanWorkspaceState();
     final currentVault = vaultState.asData?.value;
     final isBusy = workspace.isScanning || workspace.isCleaning;
+    final settingsSummary =
+        '${settings.createBackupsBeforeWrite ? 'Backups on' : 'Backups off'} • ${settings.appearanceMode.label} appearance';
 
     return Scaffold(
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
             final isCompact = constraints.maxWidth < 1180;
+            final railHeight = constraints.maxHeight - (AppSpacing.lg * 2);
 
             if (isCompact) {
               return SingleChildScrollView(
@@ -51,18 +54,17 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
                       context: context,
                       currentVault: currentVault,
                       workspace: workspace,
-                      settingsSummary: settings.createBackupsBeforeWrite
-                          ? 'Backups enabled'
-                          : 'Backups disabled',
+                      settingsSummary: settingsSummary,
                       isBusy: isBusy,
+                      fillHeight: false,
                     ),
                     const SizedBox(height: AppSpacing.md),
                     SizedBox(
-                      height: 560,
+                      height: 620,
                       child: _buildCenterPane(context, currentVault, workspace),
                     ),
                     const SizedBox(height: AppSpacing.md),
-                    SizedBox(height: 520, child: _buildPreviewPane(workspace)),
+                    SizedBox(height: 560, child: _buildPreviewPane(workspace)),
                   ],
                 ),
               );
@@ -74,15 +76,15 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(
-                    width: 288,
+                    width: 296,
+                    height: railHeight,
                     child: _buildLeftRail(
                       context: context,
                       currentVault: currentVault,
                       workspace: workspace,
-                      settingsSummary: settings.createBackupsBeforeWrite
-                          ? 'Backups enabled'
-                          : 'Backups disabled',
+                      settingsSummary: settingsSummary,
                       isBusy: isBusy,
+                      fillHeight: true,
                     ),
                   ),
                   const SizedBox(width: AppSpacing.md),
@@ -107,28 +109,32 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
     required ScanWorkspaceState workspace,
     required String settingsSummary,
     required bool isBusy,
+    required bool fillHeight,
   }) {
+    final colors = context.appColors;
+    final textTheme = Theme.of(context).textTheme;
+
     return AppSurfaceCard(
+      showShadow: true,
+      backgroundColor: colors.sidebarSurface,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             AppStrings.appName,
-            style: Theme.of(context).textTheme.headlineSmall,
+            style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
             AppStrings.sidebarSubtitle,
-            style: Theme.of(context).textTheme.bodySmall,
+            style: textTheme.bodySmall?.copyWith(color: colors.textSecondary),
           ),
           const SizedBox(height: AppSpacing.xxs),
           Text(
             AppStrings.shortDescription,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+            style: textTheme.bodySmall?.copyWith(color: colors.textMuted),
           ),
-          const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.xl),
           VaultSelector(
             vault: currentVault,
             isBusy: isBusy,
@@ -136,14 +142,24 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
             onClearVault: _handleClearVault,
           ),
           const SizedBox(height: AppSpacing.lg),
+          Text(
+            'Scan',
+            style: textTheme.labelLarge?.copyWith(color: colors.textSecondary),
+          ),
+          const SizedBox(height: AppSpacing.xs),
           AppButton(
             label: workspace.isScanning ? 'Scanning…' : 'Scan vault',
             icon: Icons.search_rounded,
             onPressed: currentVault == null || isBusy ? null : _runScan,
           ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            'After review',
+            style: textTheme.labelLarge?.copyWith(color: colors.textSecondary),
+          ),
           const SizedBox(height: AppSpacing.xs),
           AppButton(
-            label: workspace.isCleaning ? 'Cleaning…' : 'Clean selected files',
+            label: workspace.isCleaning ? 'Cleaning…' : 'Clean selected',
             icon: Icons.cleaning_services_outlined,
             variant: AppButtonVariant.secondary,
             onPressed: isBusy || workspace.selectedPaths.isEmpty
@@ -152,52 +168,69 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
           ),
           const SizedBox(height: AppSpacing.xs),
           AppButton(
-            label: 'Clean all affected files',
+            label: 'Clean all affected',
             icon: Icons.done_all_rounded,
             variant: AppButtonVariant.secondary,
             onPressed: isBusy || workspace.affectedFiles.isEmpty
                 ? null
                 : _handleCleanAll,
           ),
-          const SizedBox(height: AppSpacing.xs),
+          const SizedBox(height: AppSpacing.sm),
           AppButton(
             label: 'Settings',
             icon: Icons.tune_rounded,
             variant: AppButtonVariant.ghost,
             onPressed: _openSettings,
           ),
-          const SizedBox(height: AppSpacing.lg),
+          if (fillHeight)
+            const Spacer()
+          else
+            const SizedBox(height: AppSpacing.lg),
           AppSurfaceCard(
-            backgroundColor: AppColors.surfaceRaised,
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            backgroundColor: colors.surfaceMuted,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Status',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      'Workspace status',
+                      style: textTheme.labelLarge?.copyWith(
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                    const Spacer(),
+                    _SidebarBadge(label: isBusy ? 'Busy' : 'Ready'),
+                  ],
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   workspace.statusMessage ?? AppStrings.tagline,
-                  style: Theme.of(context).textTheme.bodySmall,
+                  style: textTheme.bodySmall,
                 ),
-                if (workspace.lastExecutionResult != null) ...[
+                if (currentVault != null) ...[
                   const SizedBox(height: AppSpacing.sm),
                   Text(
-                    _executionSummary(workspace.lastExecutionResult!),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary,
+                    'Current vault: ${currentVault.name}',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                ],
+                if (workspace.lastExecutionResult case final result?) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    _executionSummary(result),
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colors.textSecondary,
                     ),
                   ),
                 ],
                 const SizedBox(height: AppSpacing.sm),
                 Text(
                   settingsSummary,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+                  style: textTheme.bodySmall?.copyWith(color: colors.textMuted),
                 ),
               ],
             ),
@@ -224,11 +257,13 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
         const SizedBox(height: AppSpacing.md),
         Expanded(
           child: AppSurfaceCard(
+            showShadow: true,
             child: currentVault == null
                 ? const EmptyStateView(
-                    title: 'Select an Obsidian vault to begin',
+                    eyebrow: 'Affected files',
+                    title: 'Choose a vault to start scanning',
                     message:
-                        'Pick a vault in the left rail, scan markdown files recursively, and review every change before VaultWash writes anything.',
+                        'Pick an Obsidian vault in the left rail, run a scan, and review every affected file before VaultWash writes anything.',
                     icon: Icons.folder_copy_outlined,
                   )
                 : Column(
@@ -263,6 +298,7 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
     return SizedBox(
       height: double.infinity,
       child: AppSurfaceCard(
+        showShadow: true,
         child: PreviewPanel(fileResult: workspace.focusedFile),
       ),
     );
@@ -290,7 +326,7 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
     final files = ref.read(scanControllerProvider.notifier).selectedFiles();
     await _confirmAndClean(
       files: files,
-      title: 'Clean selected files',
+      title: 'Clean selected',
       description:
           'VaultWash will update only the files selected in the current review list.',
     );
@@ -300,7 +336,7 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
     final files = ref.read(scanControllerProvider.notifier).allAffectedFiles();
     await _confirmAndClean(
       files: files,
-      title: 'Clean all affected files',
+      title: 'Clean all affected',
       description:
           'VaultWash will update every affected markdown file from the current scan.',
     );
@@ -318,6 +354,8 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
+        final colors = dialogContext.appColors;
+
         return AlertDialog(
           title: Text(title),
           content: SizedBox(
@@ -334,9 +372,9 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
                           .createBackupsBeforeWrite
                       ? 'Backup copies will be created beside each file before VaultWash writes changes.'
                       : 'Backup copies are currently disabled for this cleanup run.',
-                  style: Theme.of(dialogContext).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
+                  style: Theme.of(
+                    dialogContext,
+                  ).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 Text(
@@ -369,11 +407,11 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Review later'),
+              child: const Text('Keep reviewing'),
             ),
             FilledButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Clean files'),
+              child: const Text('Clean now'),
             ),
           ],
         );
@@ -412,6 +450,35 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
   }
 }
 
+class _SidebarBadge extends StatelessWidget {
+  const _SidebarBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xxs,
+      ),
+      decoration: BoxDecoration(
+        color: colors.surfaceRaised,
+        borderRadius: AppRadius.sm,
+        border: Border.all(color: colors.border),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(
+          context,
+        ).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
+      ),
+    );
+  }
+}
+
 class _FailureSection extends StatelessWidget {
   const _FailureSection({required this.failures});
 
@@ -419,24 +486,25 @@ class _FailureSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final visibleFailures = failures.take(4).toList();
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
-        color: AppColors.surfaceRaised,
+        color: colors.warningSoft,
         borderRadius: AppRadius.sm,
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: colors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '${failures.length} unreadable files',
+            '${failures.length} unreadable file${failures.length == 1 ? '' : 's'}',
             style: Theme.of(
               context,
-            ).textTheme.labelLarge?.copyWith(color: AppColors.warning),
+            ).textTheme.labelLarge?.copyWith(color: colors.warning),
           ),
           const SizedBox(height: AppSpacing.xs),
           ...visibleFailures.map(
@@ -448,7 +516,7 @@ class _FailureSection extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(
                   context,
-                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                ).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
               ),
             ),
           ),
@@ -457,7 +525,7 @@ class _FailureSection extends StatelessWidget {
               'Plus ${failures.length - visibleFailures.length} more unreadable files.',
               style: Theme.of(
                 context,
-              ).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+              ).textTheme.bodySmall?.copyWith(color: colors.textMuted),
             ),
         ],
       ),

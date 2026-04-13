@@ -4,12 +4,14 @@ import 'package:vaultwash/app/theme/app_tokens.dart';
 import 'package:vaultwash/core/widgets/app_section_header.dart';
 import 'package:vaultwash/features/cleanup/infrastructure/default_cleanup_rules.dart';
 import 'package:vaultwash/features/settings/application/app_settings_controller.dart';
+import 'package:vaultwash/features/settings/domain/app_appearance_mode.dart';
 
 class SettingsDialog extends ConsumerWidget {
   const SettingsDialog({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.appColors;
     final settings = ref.watch(appSettingsControllerProvider);
     final rules = ref.watch(cleanupRulesProvider);
     final notifier = ref.read(appSettingsControllerProvider.notifier);
@@ -39,6 +41,34 @@ class SettingsDialog extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: AppSpacing.md),
+                Text(
+                  'Appearance',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Follow the system appearance or keep VaultWash in a fixed light or dark mode.',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                SegmentedButton<AppAppearanceMode>(
+                  showSelectedIcon: false,
+                  segments: AppAppearanceMode.values
+                      .map(
+                        (mode) => ButtonSegment<AppAppearanceMode>(
+                          value: mode,
+                          label: Text(mode.label),
+                        ),
+                      )
+                      .toList(),
+                  selected: {settings.appearanceMode},
+                  onSelectionChanged: (selection) {
+                    notifier.setAppearanceMode(selection.first);
+                  },
+                ),
+                const Divider(height: AppSpacing.xl),
                 Text(
                   'Write behavior',
                   style: Theme.of(context).textTheme.titleMedium,

@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:vaultwash/app/app.dart';
+import 'package:vaultwash/app/theme/app_theme.dart';
+import 'package:vaultwash/features/scan/presentation/workspace_screen.dart';
 import 'package:vaultwash/features/settings/infrastructure/settings_local_data_source.dart';
 
 void main() {
@@ -17,12 +18,17 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [sharedPreferencesProvider.overrideWithValue(preferences)],
-        child: const VaultWashApp(),
+        child: MaterialApp(
+          theme: AppTheme.light(),
+          darkTheme: AppTheme.dark(),
+          home: const WorkspaceScreen(),
+        ),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
 
-    expect(find.text('Select an Obsidian vault to begin'), findsOneWidget);
+    expect(find.text('Choose a vault to start scanning'), findsOneWidget);
     expect(
       tester
           .widget<FilledButton>(find.widgetWithText(FilledButton, 'Scan vault'))
@@ -32,7 +38,7 @@ void main() {
     expect(
       tester
           .widget<OutlinedButton>(
-            find.widgetWithText(OutlinedButton, 'Clean selected files'),
+            find.widgetWithText(OutlinedButton, 'Clean selected'),
           )
           .onPressed,
       isNull,
@@ -40,7 +46,7 @@ void main() {
     expect(
       tester
           .widget<OutlinedButton>(
-            find.widgetWithText(OutlinedButton, 'Clean all affected files'),
+            find.widgetWithText(OutlinedButton, 'Clean all affected'),
           )
           .onPressed,
       isNull,
