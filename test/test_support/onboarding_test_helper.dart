@@ -19,7 +19,7 @@ Future<Directory> createOnboardingStateDirectory({required bool seen}) async {
   return directory;
 }
 
-onboardingDirectoryOverride(Directory directory) {
+Object onboardingDirectoryOverride(Directory directory) {
   return onboardingDirectoryResolverProvider.overrideWithValue(
     () async => directory,
   );

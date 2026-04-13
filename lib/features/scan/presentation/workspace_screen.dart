@@ -42,10 +42,10 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final isCompact = constraints.maxWidth < 1180;
-            final railHeight =
-                constraints.maxHeight > AppSpacing.lg * 2
-                    ? constraints.maxHeight - (AppSpacing.lg * 2)
-                    : 0.0;
+            final railHeight = constraints.maxHeight > AppSpacing.lg * 2
+                ? constraints.maxHeight - (AppSpacing.lg * 2)
+                : 0.0;
+            final isCondensedRail = !isCompact && railHeight < 760;
 
             if (isCompact) {
               return SingleChildScrollView(
@@ -59,7 +59,7 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
                       workspace: workspace,
                       settingsSummary: settingsSummary,
                       isBusy: isBusy,
-                      fillHeight: false,
+                      isCondensed: false,
                     ),
                     const SizedBox(height: AppSpacing.md),
                     SizedBox(
@@ -87,7 +87,7 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
                       workspace: workspace,
                       settingsSummary: settingsSummary,
                       isBusy: isBusy,
-                      fillHeight: true,
+                      isCondensed: isCondensedRail,
                     ),
                   ),
                   const SizedBox(width: AppSpacing.md),
@@ -112,72 +112,114 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
     required ScanWorkspaceState workspace,
     required String settingsSummary,
     required bool isBusy,
-    required bool fillHeight,
+    required bool isCondensed,
   }) {
     final colors = context.appColors;
     final textTheme = Theme.of(context).textTheme;
-
-    return AppSurfaceCard(
-      showShadow: true,
-      backgroundColor: colors.sidebarSurface,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            AppStrings.appName,
-            style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            AppStrings.sidebarSubtitle,
-            style: textTheme.bodySmall?.copyWith(color: colors.textSecondary),
-          ),
+    final executionSummary = workspace.lastExecutionResult == null
+        ? null
+        : _executionSummary(workspace.lastExecutionResult!);
+    final primarySection = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                AppStrings.appName,
+                style: textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            if (isCondensed)
+              IconButton(
+                onPressed: _openSettings,
+                tooltip: 'Settings',
+                icon: const Icon(Icons.tune_rounded, size: 18),
+              ),
+          ],
+        ),
+        SizedBox(height: isCondensed ? AppSpacing.xxs : AppSpacing.xs),
+        Text(
+          AppStrings.sidebarSubtitle,
+          maxLines: isCondensed ? 1 : 2,
+          overflow: TextOverflow.ellipsis,
+          style: textTheme.bodySmall?.copyWith(color: colors.textSecondary),
+        ),
+        if (!isCondensed) ...[
           const SizedBox(height: AppSpacing.xxs),
           Text(
             AppStrings.shortDescription,
             style: textTheme.bodySmall?.copyWith(color: colors.textMuted),
           ),
-          const SizedBox(height: AppSpacing.xl),
-          VaultSelector(
-            vault: currentVault,
-            isBusy: isBusy,
-            onPickVault: _handlePickVault,
-            onClearVault: _handleClearVault,
-          ),
-          const SizedBox(height: AppSpacing.lg),
+        ],
+        SizedBox(height: isCondensed ? AppSpacing.sm : AppSpacing.md),
+        _WorkspaceStatusStrip(
+          isBusy: isBusy,
+          statusMessage: workspace.statusMessage ?? AppStrings.tagline,
+          currentVault: currentVault,
+          affectedFiles: workspace.summary?.filesWithMatches ?? 0,
+          totalMatches: workspace.summary?.totalMatchesFound ?? 0,
+          lastScannedAt: workspace.lastScannedAt,
+          executionSummary: executionSummary,
+          settingsSummary: settingsSummary,
+        ),
+        SizedBox(height: isCondensed ? AppSpacing.md : AppSpacing.xl),
+        VaultSelector(
+          vault: currentVault,
+          isBusy: isBusy,
+          onPickVault: _handlePickVault,
+          onClearVault: _handleClearVault,
+          compact: isCondensed,
+        ),
+        SizedBox(height: isCondensed ? AppSpacing.md : AppSpacing.lg),
+        if (!isCondensed) ...[
           Text(
             'Scan',
             style: textTheme.labelLarge?.copyWith(color: colors.textSecondary),
           ),
           const SizedBox(height: AppSpacing.xs),
-          AppButton(
-            label: workspace.isScanning ? 'Scanning…' : 'Scan vault',
-            icon: Icons.search_rounded,
-            onPressed: currentVault == null || isBusy ? null : _runScan,
-          ),
-          const SizedBox(height: AppSpacing.md),
+        ],
+        AppButton(
+          label: workspace.isScanning ? 'Scanning…' : 'Scan vault',
+          icon: Icons.search_rounded,
+          onPressed: currentVault == null || isBusy ? null : _runScan,
+        ),
+        SizedBox(height: isCondensed ? AppSpacing.xs : AppSpacing.md),
+        if (!isCondensed) ...[
           Text(
             'After review',
             style: textTheme.labelLarge?.copyWith(color: colors.textSecondary),
           ),
           const SizedBox(height: AppSpacing.xs),
-          AppButton(
-            label: workspace.isCleaning ? 'Cleaning…' : 'Clean selected',
-            icon: Icons.cleaning_services_outlined,
-            variant: AppButtonVariant.secondary,
-            onPressed: isBusy || workspace.selectedPaths.isEmpty
-                ? null
-                : _handleCleanSelected,
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          AppButton(
-            label: 'Clean all affected',
-            icon: Icons.done_all_rounded,
-            variant: AppButtonVariant.secondary,
-            onPressed: isBusy || workspace.affectedFiles.isEmpty
-                ? null
-                : _handleCleanAll,
-          ),
+        ],
+        Row(
+          children: [
+            Expanded(
+              child: AppButton(
+                label: workspace.isCleaning ? 'Cleaning…' : 'Clean selected',
+                icon: Icons.cleaning_services_outlined,
+                variant: AppButtonVariant.secondary,
+                onPressed: isBusy || workspace.selectedPaths.isEmpty
+                    ? null
+                    : _handleCleanSelected,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            Expanded(
+              child: AppButton(
+                label: 'Clean all affected',
+                icon: Icons.done_all_rounded,
+                variant: AppButtonVariant.secondary,
+                onPressed: isBusy || workspace.affectedFiles.isEmpty
+                    ? null
+                    : _handleCleanAll,
+              ),
+            ),
+          ],
+        ),
+        if (!isCondensed) ...[
           const SizedBox(height: AppSpacing.sm),
           AppButton(
             label: 'Settings',
@@ -185,61 +227,14 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
             variant: AppButtonVariant.ghost,
             onPressed: _openSettings,
           ),
-          if (fillHeight)
-            const Spacer()
-          else
-            const SizedBox(height: AppSpacing.lg),
-          AppSurfaceCard(
-            padding: const EdgeInsets.all(AppSpacing.sm),
-            backgroundColor: colors.surfaceMuted,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      'Workspace status',
-                      style: textTheme.labelLarge?.copyWith(
-                        color: colors.textSecondary,
-                      ),
-                    ),
-                    const Spacer(),
-                    _SidebarBadge(label: isBusy ? 'Busy' : 'Ready'),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  workspace.statusMessage ?? AppStrings.tagline,
-                  style: textTheme.bodySmall,
-                ),
-                if (currentVault != null) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    'Current vault: ${currentVault.name}',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colors.textSecondary,
-                    ),
-                  ),
-                ],
-                if (workspace.lastExecutionResult case final result?) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    _executionSummary(result),
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colors.textSecondary,
-                    ),
-                  ),
-                ],
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  settingsSummary,
-                  style: textTheme.bodySmall?.copyWith(color: colors.textMuted),
-                ),
-              ],
-            ),
-          ),
         ],
-      ),
+      ],
+    );
+
+    return AppSurfaceCard(
+      showShadow: true,
+      backgroundColor: colors.sidebarSurface,
+      child: primarySection,
     );
   }
 
@@ -453,30 +448,131 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
   }
 }
 
-class _SidebarBadge extends StatelessWidget {
-  const _SidebarBadge({required this.label});
+class _WorkspaceStatusStrip extends StatelessWidget {
+  const _WorkspaceStatusStrip({
+    required this.isBusy,
+    required this.statusMessage,
+    required this.currentVault,
+    required this.affectedFiles,
+    required this.totalMatches,
+    required this.lastScannedAt,
+    required this.executionSummary,
+    required this.settingsSummary,
+  });
 
-  final String label;
+  final bool isBusy;
+  final String statusMessage;
+  final VaultRef? currentVault;
+  final int affectedFiles;
+  final int totalMatches;
+  final DateTime? lastScannedAt;
+  final String? executionSummary;
+  final String settingsSummary;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final scanLabel = lastScannedAt == null
+        ? 'No scan'
+        : affectedFiles > 0
+        ? '$affectedFiles affected'
+        : 'Scan clean';
 
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xxs,
-      ),
-      decoration: BoxDecoration(
-        color: colors.surfaceRaised,
-        borderRadius: AppRadius.sm,
-        border: Border.all(color: colors.border),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(
-          context,
-        ).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
+    return Wrap(
+      key: const ValueKey('workspace-status-strip'),
+      spacing: AppSpacing.xs,
+      runSpacing: AppSpacing.xs,
+      children: [
+        _StatusPill(
+          icon: isBusy ? Icons.autorenew_rounded : Icons.check_circle_rounded,
+          label: isBusy ? 'Busy' : 'Ready',
+          tooltip: [
+            statusMessage,
+            if (executionSummary != null) 'Last cleanup: $executionSummary',
+          ].join('\n'),
+          foregroundColor: isBusy ? colors.warning : colors.success,
+          backgroundColor: isBusy ? colors.warningSoft : colors.successSoft,
+        ),
+        _StatusPill(
+          icon: currentVault == null
+              ? Icons.folder_off_outlined
+              : Icons.folder_open_rounded,
+          label: currentVault == null ? 'No vault' : 'Vault set',
+          tooltip: currentVault == null
+              ? 'Choose a vault to enable scanning and cleanup.'
+              : 'Current vault: ${currentVault!.name}\n${currentVault!.absolutePath}',
+          foregroundColor: currentVault == null
+              ? colors.textSecondary
+              : colors.accent,
+          backgroundColor: currentVault == null
+              ? colors.surfaceMuted
+              : colors.accentSoft,
+        ),
+        _StatusPill(
+          icon: Icons.search_rounded,
+          label: scanLabel,
+          tooltip: lastScannedAt == null
+              ? 'No scan has run yet.'
+              : '$affectedFiles affected files • $totalMatches total artifacts found.',
+          foregroundColor: colors.textSecondary,
+          backgroundColor: colors.surfaceMuted,
+        ),
+        _StatusPill(
+          icon: Icons.tune_rounded,
+          label: 'Prefs',
+          tooltip: settingsSummary,
+          foregroundColor: colors.textSecondary,
+          backgroundColor: colors.surfaceMuted,
+        ),
+      ],
+    );
+  }
+}
+
+class _StatusPill extends StatelessWidget {
+  const _StatusPill({
+    required this.icon,
+    required this.label,
+    required this.tooltip,
+    required this.foregroundColor,
+    required this.backgroundColor,
+  });
+
+  final IconData icon;
+  final String label;
+  final String tooltip;
+  final Color foregroundColor;
+  final Color backgroundColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Tooltip(
+      message: tooltip,
+      waitDuration: const Duration(milliseconds: 350),
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.xs,
+        ),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: AppRadius.sm,
+          border: Border.all(color: colors.border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: foregroundColor),
+            const SizedBox(width: AppSpacing.xs),
+            Text(
+              label,
+              style: textTheme.labelSmall?.copyWith(color: foregroundColor),
+            ),
+          ],
+        ),
       ),
     );
   }

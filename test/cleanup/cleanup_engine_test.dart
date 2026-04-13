@@ -69,4 +69,17 @@ void main() {
 
     expect(first.originalContentHash, isNot(second.originalContentHash));
   });
+
+  test('keeps every excerpt when more than twelve artifacts are found', () {
+    final repeatedArtifacts = List.generate(
+      20,
+      (index) => ':contentReference[oaicite:${index + 1}]{index=${index + 1}}',
+    ).join(' ');
+
+    final preview = engine.generatePreview(repeatedArtifacts, [oaiciteRule]);
+
+    expect(preview.matchCount, 20);
+    expect(preview.matches, hasLength(20));
+    expect(preview.excerpts, hasLength(20));
+  });
 }
