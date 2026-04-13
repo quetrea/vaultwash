@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dart analyze:*)",
+      "Read(//home/arthurwhitlock/.pub-cache/hosted/pub.dev/**)",
+      "Bash(grep -r \"Override\" ~/.pub-cache/hosted/pub.dev/flutter_riverpod-3*/lib/flutter_riverpod.dart)",
+      "Bash(flutter pub:*)",
+      "Bash(git -C /home/arthurwhitlock/Documents/Projects/VaultWash/vault_wash_obsidian status)",
+      "Bash(git -C /home/arthurwhitlock/Documents/Projects/VaultWash/vault_wash_obsidian diff --stat)",
+      "Bash(git -C /home/arthurwhitlock/Documents/Projects/VaultWash/vault_wash_obsidian log --oneline -3)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(git -C /home/arthurwhitlock/Documents/Projects/VaultWash/vault_wash_obsidian push origin feat/ui-theme-onboarding)",
+      "Bash(flutter test:*)",
+      "Bash(flutter build:*)"
+    ]
+  }
+}

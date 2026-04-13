@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vaultwash/app/theme/app_theme.dart';
 import 'package:vaultwash/features/cleanup/domain/cleanup_preview.dart';
@@ -66,10 +67,12 @@ void main() {
                   ),
                 ),
               ),
-              const Expanded(
+              Expanded(
                 child: SizedBox(
                   height: 420,
-                  child: PreviewPanel(fileResult: fileResult),
+                  child: ProviderScope(
+                    child: PreviewPanel(fileResult: fileResult),
+                  ),
                 ),
               ),
             ],
@@ -78,9 +81,15 @@ void main() {
       ),
     );
 
-    expect(find.text('notes/chapter.md'), findsNWidgets(2));
+    // File list shows full relative path; inspector header shows only filename.
+    expect(find.text('notes/chapter.md'), findsOneWidget);
+    expect(find.text('chapter.md'), findsOneWidget);
     expect(find.text('Affected files'), findsOneWidget);
-    expect(find.text('Preview'), findsOneWidget);
+    // Inspector eyebrow and mode labels
+    expect(find.text('INSPECTOR'), findsOneWidget);
+    expect(find.text('Excerpts'), findsOneWidget);
+    expect(find.text('Changes'), findsOneWidget);
+    // Excerpts mode (default) renders before/after columns
     expect(find.text('Before'), findsOneWidget);
     expect(find.text('After'), findsOneWidget);
     expect(find.textContaining('contentReference'), findsWidgets);
