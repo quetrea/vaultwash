@@ -61,10 +61,14 @@ ScanFileResult buildFileResult({
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  Future<ProviderScope> previewScope({required Widget child}) async {
-    SharedPreferences.setMockInitialValues({});
-    final preferences = await SharedPreferences.getInstance();
+  late SharedPreferences preferences;
 
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    preferences = await SharedPreferences.getInstance();
+  });
+
+  ProviderScope previewScope({required Widget child}) {
     return ProviderScope(
       overrides: [sharedPreferencesProvider.overrideWithValue(preferences)],
       child: child,
@@ -133,7 +137,7 @@ void main() {
               Expanded(
                 child: SizedBox(
                   height: 420,
-                  child: await previewScope(
+                  child: previewScope(
                     child: PreviewPanel(fileResult: fileResult),
                   ),
                 ),
@@ -183,7 +187,7 @@ void main() {
               child: SizedBox(
                 width: 720,
                 height: 320,
-                child: await previewScope(
+                child: previewScope(
                   child: PreviewPanel(fileResult: fileResult),
                 ),
               ),
@@ -228,7 +232,7 @@ void main() {
               child: SizedBox(
                 width: 720,
                 height: 320,
-                child: await previewScope(
+                child: previewScope(
                   child: PreviewPanel(fileResult: fileResult),
                 ),
               ),
@@ -265,7 +269,7 @@ void main() {
             child: SizedBox(
               width: 720,
               height: 320,
-              child: await previewScope(
+              child: previewScope(
                 child: PreviewPanel(fileResult: firstFile),
               ),
             ),
@@ -290,7 +294,7 @@ void main() {
             child: SizedBox(
               width: 720,
               height: 320,
-              child: await previewScope(
+              child: previewScope(
                 child: PreviewPanel(fileResult: secondFile),
               ),
             ),

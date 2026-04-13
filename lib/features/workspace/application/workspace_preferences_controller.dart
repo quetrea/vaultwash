@@ -16,10 +16,16 @@ class WorkspacePreferencesController extends Notifier<WorkspacePreferences> {
 
   Future<void> _persist(WorkspacePreferences next) async {
     final normalized = next.normalized();
+    final previous = state;
     state = normalized;
-    await ref
-        .read(workspacePreferencesLocalDataSourceProvider)
-        .save(normalized);
+    try {
+      await ref
+          .read(workspacePreferencesLocalDataSourceProvider)
+          .save(normalized);
+    } catch (_) {
+      state = previous;
+      rethrow;
+    }
   }
 
   Future<void> setDesktopRailWidth(double width) async {

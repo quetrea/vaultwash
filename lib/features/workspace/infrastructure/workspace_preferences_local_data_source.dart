@@ -37,31 +37,42 @@ class WorkspacePreferencesLocalDataSource {
   Future<void> save(WorkspacePreferences preferences) async {
     final normalized = preferences.normalized();
 
+    final bool railOk;
     if (normalized.desktopRailWidth == null) {
-      await _preferences.remove(_desktopRailWidthKey);
+      railOk = await _preferences.remove(_desktopRailWidthKey);
     } else {
-      await _preferences.setDouble(
+      railOk = await _preferences.setDouble(
         _desktopRailWidthKey,
         normalized.desktopRailWidth!,
       );
     }
+    if (!railOk) throw Exception('Failed to persist $_desktopRailWidthKey');
 
+    final bool previewOk;
     if (normalized.desktopPreviewFraction == null) {
-      await _preferences.remove(_desktopPreviewFractionKey);
+      previewOk = await _preferences.remove(_desktopPreviewFractionKey);
     } else {
-      await _preferences.setDouble(
+      previewOk = await _preferences.setDouble(
         _desktopPreviewFractionKey,
         normalized.desktopPreviewFraction!,
       );
     }
+    if (!previewOk) {
+      throw Exception('Failed to persist $_desktopPreviewFractionKey');
+    }
 
-    await _preferences.setBool(
+    final collapsedOk = await _preferences.setBool(
       _summaryCollapsedKey,
       normalized.summaryCollapsed,
     );
-    await _preferences.setString(
+    if (!collapsedOk) {
+      throw Exception('Failed to persist $_summaryCollapsedKey');
+    }
+
+    final modeOk = await _preferences.setString(
       _inspectorModeKey,
       normalized.inspectorMode.storageValue,
     );
+    if (!modeOk) throw Exception('Failed to persist $_inspectorModeKey');
   }
 }

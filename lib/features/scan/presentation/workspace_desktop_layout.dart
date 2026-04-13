@@ -91,6 +91,11 @@ class _DesktopWorkspaceLayoutState
                     _dragRailWidth = null;
                   });
                 },
+                onDragCancel: () {
+                  setState(() {
+                    _dragRailWidth = null;
+                  });
+                },
               ),
               SizedBox(
                 key: const ValueKey('workspace-center-pane-host'),
@@ -100,6 +105,11 @@ class _DesktopWorkspaceLayoutState
               _WorkspaceResizeHandle(
                 key: const ValueKey('workspace-preview-resize-handle'),
                 tooltip: 'Resize review pane',
+                onDragCancel: () {
+                  setState(() {
+                    _dragPreviewFraction = null;
+                  });
+                },
                 onDragUpdate: (delta) {
                   if (geometry.contentWidth == 0) {
                     return;
@@ -160,11 +170,13 @@ class _WorkspaceResizeHandle extends StatefulWidget {
     required this.tooltip,
     required this.onDragUpdate,
     required this.onDragEnd,
+    required this.onDragCancel,
   });
 
   final String tooltip;
   final ValueChanged<double> onDragUpdate;
   final VoidCallback onDragEnd;
+  final VoidCallback onDragCancel;
 
   @override
   State<_WorkspaceResizeHandle> createState() => _WorkspaceResizeHandleState();
@@ -200,7 +212,7 @@ class _WorkspaceResizeHandleState extends State<_WorkspaceResizeHandle> {
             },
             onHorizontalDragCancel: () {
               setState(() => _dragging = false);
-              widget.onDragEnd();
+              widget.onDragCancel();
             },
             child: SizedBox(
               width: WorkspaceLayoutSpec.resizeHandleWidth,

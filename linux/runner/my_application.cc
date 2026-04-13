@@ -55,6 +55,19 @@ static void my_application_activate(GApplication* application) {
 
   gtk_window_set_default_size(window, 1280, 720);
 
+  // Set window icon from the bundled asset (works in release bundle).
+  // Falls back gracefully if the file is not found (e.g., plain flutter run).
+  {
+    GError* icon_error = nullptr;
+    GdkPixbuf* icon = gdk_pixbuf_new_from_file("vaultwash-icon.png", &icon_error);
+    if (icon) {
+      gtk_window_set_icon(window, icon);
+      g_object_unref(icon);
+    } else {
+      g_clear_error(&icon_error);
+    }
+  }
+
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   fl_dart_project_set_dart_entrypoint_arguments(
       project, self->dart_entrypoint_arguments);

@@ -229,6 +229,8 @@ class _CollapsedSummaryBody extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs),
           Text(
             errorMessage!,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: textTheme.bodySmall?.copyWith(color: colors.danger),
           ),
         ],
