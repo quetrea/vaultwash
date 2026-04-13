@@ -32,6 +32,7 @@ class VaultScanner {
               entity.path,
               excludeObsidian: request.excludeObsidian,
               excludeHiddenFolders: request.excludeHiddenFolders,
+              excludedFolderNames: request.excludedFolderNames,
             )) {
               continue;
             }
@@ -125,6 +126,7 @@ class VaultScanner {
     String path, {
     required bool excludeObsidian,
     required bool excludeHiddenFolders,
+    required List<String> excludedFolderNames,
   }) {
     final name = p.basename(path);
 
@@ -137,6 +139,10 @@ class VaultScanner {
     }
 
     if (excludeHiddenFolders && name.startsWith('.')) {
+      return true;
+    }
+
+    if (excludedFolderNames.contains(name)) {
       return true;
     }
 

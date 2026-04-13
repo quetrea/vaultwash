@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vaultwash/app/app_strings.dart';
 import 'package:vaultwash/app/theme/app_tokens.dart';
@@ -6,6 +7,7 @@ import 'package:vaultwash/core/widgets/app_button.dart';
 import 'package:vaultwash/core/widgets/app_surface_card.dart';
 import 'package:vaultwash/core/widgets/empty_state_view.dart';
 import 'package:vaultwash/features/cleanup/domain/cleanup_execution_result.dart';
+import 'package:vaultwash/features/cleanup/domain/cleanup_session.dart';
 import 'package:vaultwash/features/cleanup/presentation/preview_panel.dart';
 import 'package:vaultwash/features/scan/application/scan_controller.dart';
 import 'package:vaultwash/features/scan/domain/scan_failure.dart';
@@ -530,7 +532,9 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
       return;
     }
 
-    _showMessage(_executionSummary(result));
+    final session =
+        ref.read(scanControllerProvider).asData?.value.lastSession;
+    _showCleanupResult(_executionSummary(result), session);
   }
 
   Future<void> _openSettings() async {
@@ -544,6 +548,26 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
       ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _showCleanupResult(String message, CleanupSession? session) {
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          action: session == null
+              ? null
+              : SnackBarAction(
+                  label: 'Copy summary',
+                  onPressed: () {
+                    Clipboard.setData(
+                      ClipboardData(text: session.toSummaryText()),
+                    );
+                  },
+                ),
+        ),
+      );
   }
 
   String _executionSummary(CleanupExecutionResult result) {
