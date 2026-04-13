@@ -1,4 +1,3 @@
-import 'dart:collection';
 import 'dart:math' as math;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,7 +19,7 @@ class CleanupEngine {
     var workingContent = originalContent;
     final matches = <CleanupMatch>[];
     final excerpts = <PreviewExcerpt>[];
-    final snippets = LinkedHashSet<String>();
+    final snippets = <String>{};
 
     for (final rule in enabledRules) {
       final ruleMatches = rule.pattern.allMatches(workingContent).toList();
@@ -60,7 +59,7 @@ class CleanupEngine {
       cleanedContent: workingContent,
       matchCount: matches.length,
       matchedSnippets: snippets.toList(),
-      excerpts: excerpts.take(12).toList(),
+      excerpts: excerpts,
       originalContentHash: hashContent(originalContent),
       matches: matches,
     );

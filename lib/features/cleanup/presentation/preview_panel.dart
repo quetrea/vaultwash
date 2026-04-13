@@ -23,9 +23,7 @@ class PreviewPanel extends ConsumerWidget {
     // Reset match navigation when the focused file changes so position
     // never carries over from a previous selection.
     ref.listen(
-      scanControllerProvider.select(
-        (s) => s.asData?.value.focusedRelativePath,
-      ),
+      scanControllerProvider.select((s) => s.asData?.value.focusedRelativePath),
       (prev, next) {
         if (prev != next) {
           ref.read(inspectorControllerProvider.notifier).resetNavigation();
@@ -34,9 +32,14 @@ class PreviewPanel extends ConsumerWidget {
     );
 
     final excerpts = fileResult?.preview.excerpts ?? const [];
-    final totalMatches = excerpts.length;
-    final focusedIndex =
-        totalMatches > 0 ? inspector.focusedMatchIndex.clamp(0, totalMatches - 1) : 0;
+    final totalMatches = fileResult?.preview.matches.length ?? 0;
+    assert(
+      fileResult == null || totalMatches == excerpts.length,
+      'Preview excerpts should stay aligned with preview matches.',
+    );
+    final focusedIndex = totalMatches > 0
+        ? inspector.focusedMatchIndex.clamp(0, totalMatches - 1)
+        : 0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -57,8 +60,7 @@ class PreviewPanel extends ConsumerWidget {
           _InspectorToolbar(
             inspector: inspector,
             totalMatches: totalMatches,
-            onSetMode:
-                ref.read(inspectorControllerProvider.notifier).setMode,
+            onSetMode: ref.read(inspectorControllerProvider.notifier).setMode,
             onPreviousMatch: () => ref
                 .read(inspectorControllerProvider.notifier)
                 .previousMatch(totalMatches),
@@ -130,7 +132,7 @@ class _InspectorHeader extends StatelessWidget {
         ),
         if (fileResult != null) ...[
           const SizedBox(width: AppSpacing.sm),
-          _ArtifactBadge(count: fileResult!.matchCount),
+          _ArtifactBadge(count: fileResult!.preview.matches.length),
         ],
       ],
     );
@@ -424,11 +426,18 @@ class _NoExcerptsPlaceholder extends StatelessWidget {
 // ─── Shared scrollable match list ─────────────────────────────────────────────
 //
 // Handles scroll controller lifecycle and auto-scrolls to the focused item
-// whenever focusedIndex changes.  The itemBuilder receives a GlobalKey that
-// the caller should attach to its root widget via KeyedSubtree.
+// whenever focusedIndex changes. We build the full column so every match keeps
+// a live context, which lets arrow navigation recover cleanly after the user
+// manually scrolls away from the focused item. The itemBuilder receives a
+// GlobalKey that the caller should attach to its root widget via KeyedSubtree.
 
 typedef _MatchItemBuilder =
-    Widget Function(BuildContext context, int index, bool isFocused, GlobalKey key);
+    Widget Function(
+      BuildContext context,
+      int index,
+      bool isFocused,
+      GlobalKey key,
+    );
 
 class _MatchListScrollable extends StatefulWidget {
   const _MatchListScrollable({
@@ -493,18 +502,24 @@ class _MatchListScrollableState extends State<_MatchListScrollable> {
 
   @override
   Widget build(BuildContext context) {
-    return ListView.separated(
+    return SingleChildScrollView(
+      key: const ValueKey('inspector-match-scrollable'),
       controller: _scrollController,
-      itemCount: widget.itemCount,
-      separatorBuilder: (_, _) => SizedBox(height: widget.separatorHeight),
-      itemBuilder: (context, index) {
-        return widget.itemBuilder(
-          context,
-          index,
-          index == widget.focusedIndex,
-          _keys[index],
-        );
-      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var index = 0; index < widget.itemCount; index++) ...[
+            widget.itemBuilder(
+              context,
+              index,
+              index == widget.focusedIndex,
+              _keys[index],
+            ),
+            if (index < widget.itemCount - 1)
+              SizedBox(height: widget.separatorHeight),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -852,9 +867,9 @@ class _PreviewColumn extends StatelessWidget {
         children: [
           Text(
             label,
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: colors.textSecondary,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.labelLarge?.copyWith(color: colors.textSecondary),
           ),
           const SizedBox(height: AppSpacing.xs),
           SelectableText(value, style: textStyle),

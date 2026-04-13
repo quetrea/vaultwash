@@ -7,6 +7,51 @@ import 'package:vaultwash/features/cleanup/presentation/preview_panel.dart';
 import 'package:vaultwash/features/scan/domain/scan_file_result.dart';
 import 'package:vaultwash/features/scan/presentation/affected_files_list.dart';
 
+ScanFileResult buildFileResult({required int matchCount}) {
+  final excerpts = List.generate(
+    matchCount,
+    (index) => PreviewExcerpt(
+      ruleId: 'oaicite_content_reference',
+      originalExcerpt: [
+        'Before artifact ${index + 1}',
+        List.filled(24, 'original segment ${index + 1}').join(' '),
+      ].join(' '),
+      cleanedExcerpt: [
+        'After artifact ${index + 1}',
+        List.filled(24, 'cleaned segment ${index + 1}').join(' '),
+      ].join(' '),
+    ),
+  );
+
+  final matches = List.generate(
+    matchCount,
+    (index) => CleanupMatch(
+      ruleId: 'oaicite_content_reference',
+      snippet: ':contentReference[oaicite:${index + 1}]{index=${index + 1}}',
+      start: index * 10,
+      end: index * 10 + 5,
+    ),
+  );
+
+  return ScanFileResult(
+    absolutePath: '/vault/notes/chapter.md',
+    relativePath: 'notes/chapter.md',
+    matchCount: matchCount,
+    matchedSnippets: matches.map((match) => match.snippet).toList(),
+    cleanedPreviewContent: 'Cleaned file content',
+    originalContentHash: 'hash',
+    preview: CleanupPreview(
+      originalContent: 'Original file content',
+      cleanedContent: 'Cleaned file content',
+      matchCount: matchCount,
+      matchedSnippets: matches.map((match) => match.snippet).toList(),
+      excerpts: excerpts,
+      originalContentHash: 'hash',
+      matches: matches,
+    ),
+  );
+}
+
 void main() {
   testWidgets('renders affected files and preview excerpts', (tester) async {
     var focusedPath = '';
@@ -105,4 +150,77 @@ void main() {
     expect(toggledPath, 'notes/chapter.md');
     expect(toggledValue, isFalse);
   });
+
+  testWidgets(
+    'returns to offscreen matches after manual scrolling and arrow navigation',
+    (tester) async {
+      final fileResult = buildFileResult(matchCount: 10);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          darkTheme: AppTheme.dark(),
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 720,
+                height: 320,
+                child: ProviderScope(
+                  child: PreviewPanel(fileResult: fileResult),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final scrollable = find.byKey(
+        const ValueKey('inspector-match-scrollable'),
+      );
+
+      await tester.drag(scrollable, const Offset(0, -1400));
+      await tester.pumpAndSettle();
+
+      expect(find.text('1 of 10'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Next match'));
+      await tester.pumpAndSettle();
+
+      final viewportTop = tester.getTopLeft(scrollable).dy;
+      final viewportBottom = tester.getBottomLeft(scrollable).dy;
+      final matchTwoCenter = tester.getCenter(find.text('Match 2')).dy;
+
+      expect(find.text('2 of 10'), findsOneWidget);
+      expect(matchTwoCenter, greaterThanOrEqualTo(viewportTop - 24));
+      expect(matchTwoCenter, lessThan(viewportBottom));
+    },
+  );
+
+  testWidgets(
+    'shows every match count when preview contains more than twelve excerpts',
+    (tester) async {
+      final fileResult = buildFileResult(matchCount: 20);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          darkTheme: AppTheme.dark(),
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 720,
+                height: 320,
+                child: ProviderScope(
+                  child: PreviewPanel(fileResult: fileResult),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('20 artifacts'), findsOneWidget);
+      expect(find.text('1 of 20'), findsOneWidget);
+    },
+  );
 }

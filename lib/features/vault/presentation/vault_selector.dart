@@ -11,12 +11,14 @@ class VaultSelector extends StatelessWidget {
     required this.isBusy,
     required this.onPickVault,
     required this.onClearVault,
+    this.compact = false,
   });
 
   final VaultRef? vault;
   final bool isBusy;
   final VoidCallback onPickVault;
   final VoidCallback onClearVault;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -26,9 +28,11 @@ class VaultSelector extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const AppSectionHeader(
+        AppSectionHeader(
           title: 'Vault',
-          subtitle: 'Choose the Obsidian vault you want VaultWash to inspect.',
+          subtitle: compact
+              ? null
+              : 'Choose the Obsidian vault you want VaultWash to inspect.',
         ),
         const SizedBox(height: AppSpacing.sm),
         Tooltip(
@@ -36,7 +40,7 @@ class VaultSelector extends StatelessWidget {
           waitDuration: const Duration(milliseconds: 400),
           child: Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(AppSpacing.sm),
+            padding: EdgeInsets.all(compact ? AppSpacing.xs : AppSpacing.sm),
             decoration: BoxDecoration(
               color: colors.surfaceRaised,
               borderRadius: AppRadius.sm,
@@ -45,7 +49,12 @@ class VaultSelector extends StatelessWidget {
             child: vault == null
                 ? Row(
                     children: [
-                      _VaultIcon(colors: colors, icon: Icons.folder_outlined),
+                      _VaultIcon(
+                        colors: colors,
+                        icon: Icons.folder_outlined,
+                        size: compact ? 32 : 36,
+                        iconSize: compact ? 16 : 18,
+                      ),
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: Text(
@@ -65,6 +74,8 @@ class VaultSelector extends StatelessWidget {
                           _VaultIcon(
                             colors: colors,
                             icon: Icons.folder_open_rounded,
+                            size: compact ? 32 : 36,
+                            iconSize: compact ? 16 : 18,
                           ),
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
@@ -80,7 +91,7 @@ class VaultSelector extends StatelessWidget {
                       const SizedBox(height: AppSpacing.xs),
                       Text(
                         vault!.absolutePath,
-                        maxLines: 2,
+                        maxLines: compact ? 1 : 2,
                         overflow: TextOverflow.ellipsis,
                         style: textTheme.bodySmall?.copyWith(
                           color: colors.textSecondary,
@@ -114,33 +125,42 @@ class VaultSelector extends StatelessWidget {
             ],
           ],
         ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          'VaultWash scans markdown files recursively and never writes during the scan.',
-          style: textTheme.bodySmall?.copyWith(color: colors.textMuted),
-        ),
+        if (!compact) ...[
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'VaultWash scans markdown files recursively and never writes during the scan.',
+            style: textTheme.bodySmall?.copyWith(color: colors.textMuted),
+          ),
+        ],
       ],
     );
   }
 }
 
 class _VaultIcon extends StatelessWidget {
-  const _VaultIcon({required this.colors, required this.icon});
+  const _VaultIcon({
+    required this.colors,
+    required this.icon,
+    required this.size,
+    required this.iconSize,
+  });
 
   final AppColors colors;
   final IconData icon;
+  final double size;
+  final double iconSize;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 36,
-      height: 36,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
         color: colors.surfaceMuted,
         borderRadius: AppRadius.sm,
         border: Border.all(color: colors.border),
       ),
-      child: Icon(icon, size: 18, color: colors.textSecondary),
+      child: Icon(icon, size: iconSize, color: colors.textSecondary),
     );
   }
 }

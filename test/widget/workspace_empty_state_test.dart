@@ -9,6 +9,39 @@ import 'package:vaultwash/features/settings/infrastructure/settings_local_data_s
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  testWidgets('left rail uses compact status chips on short desktop heights', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final preferences = await SharedPreferences.getInstance();
+
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1400, 760);
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [sharedPreferencesProvider.overrideWithValue(preferences)],
+        child: MaterialApp(
+          theme: AppTheme.light(),
+          darkTheme: AppTheme.dark(),
+          home: const WorkspaceScreen(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.text('Workspace status'), findsNothing);
+    expect(
+      find.byKey(const ValueKey('workspace-status-strip')),
+      findsOneWidget,
+    );
+    expect(find.text('Ready'), findsOneWidget);
+    expect(find.text('No vault'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('shows intentional empty state and disabled cleanup actions', (
     tester,
   ) async {
