@@ -1,0 +1,49 @@
+{
+  "mcpServers": {
+    "context7": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest"]
+    },
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"]
+    },
+    "filesystem": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/home/arthurwhitlock/Documents",
+        "/home/arthurwhitlock/Desktop"
+      ]
+    },
+    "git": {
+      "type": "stdio",
+      "command": "/home/arthurwhitlock/.local/bin/mcp-server-git",
+      "args": ["--repository", "/home/arthurwhitlock/Documents/aura"]
+    },
+    "sequential-thinking": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+    },
+    "dart": {
+      "type": "stdio",
+      "command": "/home/arthurwhitlock/flutter/bin/dart",
+      "args": [
+        "mcp-server",
+        "--flutter-sdk",
+        "/home/arthurwhitlock/flutter",
+        "--force-roots-fallback"
+      ]
+    },
+    "flutter-docs": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "flutter-mcp"]
+    }
+  }
+}

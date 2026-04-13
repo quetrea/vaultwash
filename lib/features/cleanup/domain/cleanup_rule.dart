@@ -1,3 +1,5 @@
+import 'package:vaultwash/features/cleanup/domain/cleanup_rule_category.dart';
+
 class CleanupRule {
   const CleanupRule({
     required this.id,
@@ -6,6 +8,7 @@ class CleanupRule {
     required this.pattern,
     required this.replacement,
     required this.enabledByDefault,
+    this.category = CleanupRuleCategory.aiArtifact,
   });
 
   final String id;
@@ -14,4 +17,5 @@ class CleanupRule {
   final RegExp pattern;
   final String replacement;
   final bool enabledByDefault;
+  final CleanupRuleCategory category;
 }

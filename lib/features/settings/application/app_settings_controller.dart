@@ -1,4 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:vaultwash/features/cleanup/domain/cleanup_preset.dart';
+import 'package:vaultwash/features/cleanup/domain/cleanup_rule.dart';
 import 'package:vaultwash/features/settings/domain/app_appearance_mode.dart';
 import 'package:vaultwash/features/settings/domain/app_settings.dart';
 import 'package:vaultwash/features/settings/infrastructure/settings_local_data_source.dart';
@@ -52,6 +54,33 @@ class AppSettingsController extends Notifier<AppSettings> {
       nextRuleIds.remove(ruleId);
     }
 
-    await _persist(state.copyWith(enabledRuleIds: nextRuleIds));
+    // Toggling individual rules breaks preset alignment — clear activePreset.
+    await _persist(
+      state.copyWith(enabledRuleIds: nextRuleIds, clearActivePreset: true),
+    );
+  }
+
+  /// Applies [preset], updating [enabledRuleIds] and recording [activePreset].
+  /// [allRules] is the full rule registry needed to resolve preset membership.
+  Future<void> applyPreset(
+    CleanupPreset preset,
+    List<CleanupRule> allRules,
+  ) async {
+    final ruleIds = preset.ruleIds(allRules);
+    await _persist(state.copyWith(enabledRuleIds: ruleIds, activePreset: preset));
+  }
+
+  Future<void> addExcludedFolderName(String name) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty || state.excludedFolderNames.contains(trimmed)) {
+      return;
+    }
+    final next = [...state.excludedFolderNames, trimmed];
+    await _persist(state.copyWith(excludedFolderNames: next));
+  }
+
+  Future<void> removeExcludedFolderName(String name) async {
+    final next = state.excludedFolderNames.where((n) => n != name).toList();
+    await _persist(state.copyWith(excludedFolderNames: next));
   }
 }

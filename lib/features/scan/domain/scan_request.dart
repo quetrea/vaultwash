@@ -7,10 +7,14 @@ class ScanRequest {
     required this.enabledRules,
     required this.excludeObsidian,
     required this.excludeHiddenFolders,
+    this.excludedFolderNames = const [],
   });
 
   final VaultRef vault;
   final List<CleanupRule> enabledRules;
   final bool excludeObsidian;
   final bool excludeHiddenFolders;
+
+  /// Additional exact folder basenames to skip during scanning.
+  final List<String> excludedFolderNames;
 }

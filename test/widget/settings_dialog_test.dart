@@ -16,7 +16,10 @@ void main() {
       'settings.create_backups': true,
       'settings.exclude_obsidian': true,
       'settings.exclude_hidden_folders': false,
-      'settings.enabled_rule_ids': <String>['oaicite_content_reference'],
+      'settings.enabled_rule_ids': <String>[
+        'oaicite_content_reference',
+        'oaicite_standalone',
+      ],
     });
     final preferences = await SharedPreferences.getInstance();
 
@@ -32,6 +35,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    // ── Static structure ────────────────────────────────────────────────────
     expect(find.text('Settings'), findsOneWidget);
     expect(find.text('Appearance'), findsOneWidget);
     expect(find.text('System'), findsOneWidget);
@@ -39,21 +43,32 @@ void main() {
     expect(find.text('Dark'), findsOneWidget);
     expect(find.text('Exclude .obsidian/'), findsOneWidget);
     expect(find.text('Exclude hidden folders'), findsOneWidget);
+    expect(find.text('Cleanup history'), findsOneWidget);
+
+    // ── Rule labels visible ─────────────────────────────────────────────────
     expect(
-      find.text('Remove broken oaicite contentReference artifacts'),
+      find.text('Remove oaicite contentReference artifacts'),
       findsOneWidget,
     );
+    expect(find.text('Remove standalone oaicite references'), findsOneWidget);
+    expect(find.text('Remove AI source citation markers'), findsOneWidget);
 
+    // ── Switches: backups on, obsidian on, hidden off ───────────────────────
     final switches = tester
         .widgetList<SwitchListTile>(find.byType(SwitchListTile))
         .toList();
-    expect(switches[0].value, isTrue);
-    expect(switches[1].value, isTrue);
-    expect(switches[2].value, isFalse);
+    expect(switches.length, 3);
+    expect(switches[0].value, isTrue);  // create backups
+    expect(switches[1].value, isTrue);  // exclude obsidian
+    expect(switches[2].value, isFalse); // exclude hidden folders
 
-    final ruleTile = tester.widget<CheckboxListTile>(
-      find.byType(CheckboxListTile),
-    );
-    expect(ruleTile.value, isTrue);
+    // ── Checkboxes: first two enabled, third disabled ───────────────────────
+    final checkboxes = tester
+        .widgetList<CheckboxListTile>(find.byType(CheckboxListTile))
+        .toList();
+    expect(checkboxes.length, 3);
+    expect(checkboxes[0].value, isTrue);  // oaicite_content_reference
+    expect(checkboxes[1].value, isTrue);  // oaicite_standalone
+    expect(checkboxes[2].value, isFalse); // ai_source_citation
   });
 }

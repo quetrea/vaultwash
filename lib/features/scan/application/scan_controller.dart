@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:vaultwash/features/cleanup/application/cleanup_history_controller.dart';
 import 'package:vaultwash/features/cleanup/domain/cleanup_execution_result.dart';
+import 'package:vaultwash/features/cleanup/domain/cleanup_session.dart';
 import 'package:vaultwash/features/cleanup/infrastructure/cleanup_writer.dart';
 import 'package:vaultwash/features/cleanup/infrastructure/default_cleanup_rules.dart';
 import 'package:vaultwash/features/scan/domain/scan_failure.dart';
@@ -27,6 +29,7 @@ class ScanWorkspaceState {
     this.isScanning = false,
     this.isCleaning = false,
     this.lastExecutionResult,
+    this.lastSession,
     this.lastScannedAt,
     this.statusMessage,
     this.errorMessage,
@@ -40,6 +43,10 @@ class ScanWorkspaceState {
   final bool isScanning;
   final bool isCleaning;
   final CleanupExecutionResult? lastExecutionResult;
+
+  /// The most recent cleanup session recorded to history.
+  final CleanupSession? lastSession;
+
   final DateTime? lastScannedAt;
   final String? statusMessage;
   final String? errorMessage;
@@ -55,6 +62,8 @@ class ScanWorkspaceState {
     bool? isCleaning,
     CleanupExecutionResult? lastExecutionResult,
     bool clearExecutionResult = false,
+    CleanupSession? lastSession,
+    bool clearLastSession = false,
     DateTime? lastScannedAt,
     Object? statusMessage = _unset,
     Object? errorMessage = _unset,
@@ -72,6 +81,8 @@ class ScanWorkspaceState {
       lastExecutionResult: clearExecutionResult
           ? null
           : (lastExecutionResult ?? this.lastExecutionResult),
+      lastSession:
+          clearLastSession ? null : (lastSession ?? this.lastSession),
       lastScannedAt: lastScannedAt ?? this.lastScannedAt,
       statusMessage: identical(statusMessage, _unset)
           ? this.statusMessage
@@ -140,6 +151,7 @@ class ScanController extends AsyncNotifier<ScanWorkspaceState> {
             enabledRules: rules,
             excludeObsidian: settings.excludeObsidian,
             excludeHiddenFolders: settings.excludeHiddenFolders,
+            excludedFolderNames: settings.excludedFolderNames,
           ),
         );
 
@@ -209,6 +221,8 @@ class ScanController extends AsyncNotifier<ScanWorkspaceState> {
 
     final current = state.asData?.value ?? const ScanWorkspaceState();
     final settings = ref.read(appSettingsControllerProvider);
+    final rules = ref.read(enabledCleanupRulesProvider);
+    final vault = await ref.read(vaultControllerProvider.future);
 
     state = AsyncData(
       current.copyWith(
@@ -225,17 +239,50 @@ class ScanController extends AsyncNotifier<ScanWorkspaceState> {
           createBackups: settings.createBackupsBeforeWrite,
         );
 
-    final updated = (state.asData?.value ?? current).copyWith(
-      isCleaning: false,
-      lastExecutionResult: result,
-      statusMessage: 'Cleanup finished. Refreshing the vault view…',
-      errorMessage: null,
-    );
-    state = AsyncData(updated);
+    // Record the cleanup session in history.
+    if (vault != null && result.successCount > 0) {
+      final session = CleanupSession(
+        id: CleanupSession.generateId(),
+        timestamp: DateTime.now(),
+        ruleIds: rules.map((r) => r.id).toList(),
+        ruleLabels: rules.map((r) => r.label).toList(),
+        vaultPath: vault.absolutePath,
+        vaultName: vault.name,
+        filesChanged: result.successCount,
+        filesSkipped: result.skippedCount,
+        filesFailed: result.failureCount,
+        backupsCreated: settings.createBackupsBeforeWrite,
+        changedRelativePaths: result.fileResults
+            .where(
+              (f) => f.status == CleanupFileStatus.success,
+            )
+            .map((f) => f.relativePath)
+            .toList(),
+      );
+
+      await ref.read(cleanupHistoryControllerProvider.notifier).record(session);
+
+      final updated = (state.asData?.value ?? current).copyWith(
+        isCleaning: false,
+        lastExecutionResult: result,
+        lastSession: session,
+        statusMessage: 'Cleanup finished. Refreshing the vault view…',
+        errorMessage: null,
+      );
+      state = AsyncData(updated);
+    } else {
+      final updated = (state.asData?.value ?? current).copyWith(
+        isCleaning: false,
+        lastExecutionResult: result,
+        statusMessage: 'Cleanup finished. Refreshing the vault view…',
+        errorMessage: null,
+      );
+      state = AsyncData(updated);
+    }
 
     await scanVault();
 
-    final rescanned = state.asData?.value ?? updated;
+    final rescanned = state.asData?.value ?? current;
     state = AsyncData(
       rescanned.copyWith(
         lastExecutionResult: result,
