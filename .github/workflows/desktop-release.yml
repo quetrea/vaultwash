@@ -29,6 +29,17 @@ jobs:
       - name: Enable Linux desktop
         run: flutter config --enable-linux-desktop
 
+      - name: Install Linux desktop build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang \
+            cmake \
+            ninja-build \
+            pkg-config \
+            libgtk-3-dev \
+            liblzma-dev
+
       - name: Install dependencies
         run: flutter pub get
 
@@ -55,6 +66,17 @@ jobs:
 
       - name: Enable Linux desktop
         run: flutter config --enable-linux-desktop
+
+      - name: Install Linux desktop build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang \
+            cmake \
+            ninja-build \
+            pkg-config \
+            libgtk-3-dev \
+            liblzma-dev
 
       - name: Install dependencies
         run: flutter pub get

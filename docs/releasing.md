@@ -6,7 +6,12 @@ VaultWash ships desktop build artifacts for Linux, Windows, and macOS. Linux is 
 
 - Linux:
   - Flutter stable with Linux desktop enabled
-  - GTK build dependencies available on the host
+  - Native build dependencies installed on the host:
+
+    ```bash
+    sudo apt-get update
+    sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+    ```
 - Windows:
   - Flutter stable with Windows desktop enabled
   - Visual Studio C++ desktop workload
@@ -15,13 +20,14 @@ VaultWash ships desktop build artifacts for Linux, Windows, and macOS. Linux is 
   - Xcode and command line tools
 
 Each desktop platform should generally be built on its own matching host or CI runner.
+The GitHub Actions Linux jobs install the same Ubuntu packages before running `flutter build linux --release`.
 
 ## Local Build Commands
 
 ### Linux
 
 ```bash
-flutter build linux
+flutter build linux --release
 ```
 
 Primary output:
