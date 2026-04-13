@@ -63,6 +63,10 @@ flutter build macos
 
 Build outputs are generated under `build/linux/`, `build/windows/`, and `build/macos/` respectively.
 
+## Local Claude Settings
+
+Project-specific Claude permissions should stay local. Copy `.claude/settings.json.template` to `.claude/settings.json` and adjust it for your own machine instead of committing absolute paths, usernames, or broad git permissions.
+
 ## Release / Download Notes
 
 - Linux is the primary supported target today.

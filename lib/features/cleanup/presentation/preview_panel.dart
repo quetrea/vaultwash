@@ -197,38 +197,61 @@ class _InspectorToolbar extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final textTheme = Theme.of(context).textTheme;
-
     final displayIndex = totalMatches > 0
         ? inspector.focusedMatchIndex.clamp(0, totalMatches - 1) + 1
         : 0;
-
-    return Row(
-      children: [
-        _ModeToggle(current: inspector.mode, onSelect: onSetMode),
-        const Spacer(),
-        if (totalMatches > 0) ...[
-          _NavButton(
-            icon: Icons.chevron_left_rounded,
-            onPressed: onPreviousMatch,
-            tooltip: 'Previous match',
-          ),
-          const SizedBox(width: AppSpacing.xs),
-          Text(
-            '$displayIndex of $totalMatches',
-            style: textTheme.bodySmall?.copyWith(color: colors.textSecondary),
-          ),
-          const SizedBox(width: AppSpacing.xs),
-          _NavButton(
-            icon: Icons.chevron_right_rounded,
-            onPressed: onNextMatch,
-            tooltip: 'Next match',
-          ),
-        ] else
-          Text(
+    final navigation = totalMatches > 0
+        ? Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _NavButton(
+                icon: Icons.chevron_left_rounded,
+                onPressed: onPreviousMatch,
+                tooltip: 'Previous match',
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Text(
+                '$displayIndex of $totalMatches',
+                style: textTheme.bodySmall?.copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              _NavButton(
+                icon: Icons.chevron_right_rounded,
+                onPressed: onNextMatch,
+                tooltip: 'Next match',
+              ),
+            ],
+          )
+        : Text(
             'No excerpts',
             style: textTheme.bodySmall?.copyWith(color: colors.textMuted),
-          ),
-      ],
+          );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 460) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _ModeToggle(current: inspector.mode, onSelect: onSetMode),
+              const SizedBox(height: AppSpacing.xs),
+              navigation,
+            ],
+          );
+        }
+
+        return Row(
+          children: [
+            Flexible(
+              child: _ModeToggle(current: inspector.mode, onSelect: onSetMode),
+            ),
+            const Spacer(),
+            navigation,
+          ],
+        );
+      },
     );
   }
 }
@@ -243,67 +266,24 @@ class _ModeToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-
-    return Container(
-      height: 28,
-      decoration: BoxDecoration(
-        borderRadius: AppRadius.sm,
-        border: Border.all(color: colors.border),
+    return SegmentedButton<InspectorMode>(
+      showSelectedIcon: false,
+      style: const ButtonStyle(
+        visualDensity: VisualDensity.compact,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
-      clipBehavior: Clip.hardEdge,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _ModeChip(
-            label: 'Excerpts',
-            isSelected: current == InspectorMode.excerpts,
-            onTap: () => onSelect(InspectorMode.excerpts),
-          ),
-          Container(width: 1, color: colors.border),
-          _ModeChip(
-            label: 'Changes',
-            isSelected: current == InspectorMode.changes,
-            onTap: () => onSelect(InspectorMode.changes),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ModeChip extends StatelessWidget {
-  const _ModeChip({
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final textTheme = Theme.of(context).textTheme;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: AppDurations.quick,
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: AppSpacing.xxs,
-        ),
-        color: isSelected ? colors.accent : colors.surfaceMuted,
-        child: Text(
-          label,
-          style: textTheme.labelSmall?.copyWith(
-            color: isSelected ? colors.background : colors.textSecondary,
-          ),
-        ),
-      ),
+      segments: InspectorMode.values
+          .map(
+            (mode) => ButtonSegment<InspectorMode>(
+              value: mode,
+              label: Text(mode.label),
+            ),
+          )
+          .toList(),
+      selected: {current},
+      onSelectionChanged: (selection) {
+        onSelect(selection.first);
+      },
     );
   }
 }
@@ -368,7 +348,9 @@ class _InspectorContent extends StatelessWidget {
 
     return switch (mode) {
       InspectorMode.excerpts => _MatchListScrollable(
-        key: const ValueKey('excerpts'),
+        key: ValueKey(
+          '${fileResult.relativePath}:${fileResult.originalContentHash}:${InspectorMode.excerpts.name}',
+        ),
         itemCount: excerpts.length,
         focusedIndex: focusedIndex,
         itemBuilder: (context, index, isFocused, globalKey) => KeyedSubtree(
@@ -381,7 +363,9 @@ class _InspectorContent extends StatelessWidget {
         ),
       ),
       InspectorMode.changes => _MatchListScrollable(
-        key: const ValueKey('changes'),
+        key: ValueKey(
+          '${fileResult.relativePath}:${fileResult.originalContentHash}:${InspectorMode.changes.name}',
+        ),
         itemCount: excerpts.length,
         focusedIndex: focusedIndex,
         separatorHeight: AppSpacing.xs,

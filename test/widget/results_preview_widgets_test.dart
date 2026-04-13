@@ -7,7 +7,11 @@ import 'package:vaultwash/features/cleanup/presentation/preview_panel.dart';
 import 'package:vaultwash/features/scan/domain/scan_file_result.dart';
 import 'package:vaultwash/features/scan/presentation/affected_files_list.dart';
 
-ScanFileResult buildFileResult({required int matchCount}) {
+ScanFileResult buildFileResult({
+  required int matchCount,
+  String relativePath = 'notes/chapter.md',
+  String originalContentHash = 'hash',
+}) {
   final excerpts = List.generate(
     matchCount,
     (index) => PreviewExcerpt(
@@ -34,19 +38,19 @@ ScanFileResult buildFileResult({required int matchCount}) {
   );
 
   return ScanFileResult(
-    absolutePath: '/vault/notes/chapter.md',
-    relativePath: 'notes/chapter.md',
+    absolutePath: '/vault/$relativePath',
+    relativePath: relativePath,
     matchCount: matchCount,
     matchedSnippets: matches.map((match) => match.snippet).toList(),
     cleanedPreviewContent: 'Cleaned file content',
-    originalContentHash: 'hash',
+    originalContentHash: originalContentHash,
     preview: CleanupPreview(
       originalContent: 'Original file content',
       cleanedContent: 'Cleaned file content',
       matchCount: matchCount,
       matchedSnippets: matches.map((match) => match.snippet).toList(),
       excerpts: excerpts,
-      originalContentHash: 'hash',
+      originalContentHash: originalContentHash,
       matches: matches,
     ),
   );
@@ -223,4 +227,66 @@ void main() {
       expect(find.text('1 of 20'), findsOneWidget);
     },
   );
+
+  testWidgets('switching files resets the inspector list scroll position', (
+    tester,
+  ) async {
+    final firstFile = buildFileResult(
+      matchCount: 10,
+      relativePath: 'notes/first.md',
+      originalContentHash: 'first-hash',
+    );
+    final secondFile = buildFileResult(
+      matchCount: 10,
+      relativePath: 'notes/second.md',
+      originalContentHash: 'second-hash',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 720,
+              height: 320,
+              child: ProviderScope(child: PreviewPanel(fileResult: firstFile)),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final scrollable = find.byKey(const ValueKey('inspector-match-scrollable'));
+
+    await tester.drag(scrollable, const Offset(0, -1400));
+    await tester.pumpAndSettle();
+
+    expect(find.text('first.md'), findsOneWidget);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 720,
+              height: 320,
+              child: ProviderScope(child: PreviewPanel(fileResult: secondFile)),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final viewportTop = tester.getTopLeft(scrollable).dy;
+    final matchOneCenter = tester.getCenter(find.text('Match 1')).dy;
+
+    expect(find.text('second.md'), findsOneWidget);
+    expect(find.text('1 of 10'), findsOneWidget);
+    expect(matchOneCenter, greaterThanOrEqualTo(viewportTop - 24));
+  });
 }
