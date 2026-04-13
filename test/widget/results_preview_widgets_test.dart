@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vaultwash/app/theme/app_theme.dart';
 import 'package:vaultwash/features/cleanup/domain/cleanup_preview.dart';
 import 'package:vaultwash/features/cleanup/presentation/preview_panel.dart';
 import 'package:vaultwash/features/scan/domain/scan_file_result.dart';
 import 'package:vaultwash/features/scan/presentation/affected_files_list.dart';
+import 'package:vaultwash/features/settings/infrastructure/settings_local_data_source.dart';
 
 ScanFileResult buildFileResult({
   required int matchCount,
@@ -57,6 +59,18 @@ ScanFileResult buildFileResult({
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  Future<ProviderScope> previewScope({required Widget child}) async {
+    SharedPreferences.setMockInitialValues({});
+    final preferences = await SharedPreferences.getInstance();
+
+    return ProviderScope(
+      overrides: [sharedPreferencesProvider.overrideWithValue(preferences)],
+      child: child,
+    );
+  }
+
   testWidgets('renders affected files and preview excerpts', (tester) async {
     var focusedPath = '';
     var toggledPath = '';
@@ -119,7 +133,7 @@ void main() {
               Expanded(
                 child: SizedBox(
                   height: 420,
-                  child: ProviderScope(
+                  child: await previewScope(
                     child: PreviewPanel(fileResult: fileResult),
                   ),
                 ),
@@ -169,7 +183,7 @@ void main() {
               child: SizedBox(
                 width: 720,
                 height: 320,
-                child: ProviderScope(
+                child: await previewScope(
                   child: PreviewPanel(fileResult: fileResult),
                 ),
               ),
@@ -214,7 +228,7 @@ void main() {
               child: SizedBox(
                 width: 720,
                 height: 320,
-                child: ProviderScope(
+                child: await previewScope(
                   child: PreviewPanel(fileResult: fileResult),
                 ),
               ),
@@ -251,7 +265,9 @@ void main() {
             child: SizedBox(
               width: 720,
               height: 320,
-              child: ProviderScope(child: PreviewPanel(fileResult: firstFile)),
+              child: await previewScope(
+                child: PreviewPanel(fileResult: firstFile),
+              ),
             ),
           ),
         ),
@@ -274,7 +290,9 @@ void main() {
             child: SizedBox(
               width: 720,
               height: 320,
-              child: ProviderScope(child: PreviewPanel(fileResult: secondFile)),
+              child: await previewScope(
+                child: PreviewPanel(fileResult: secondFile),
+              ),
             ),
           ),
         ),

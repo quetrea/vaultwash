@@ -12,12 +12,14 @@ import 'package:vaultwash/features/scan/domain/scan_failure.dart';
 import 'package:vaultwash/features/scan/domain/scan_file_result.dart';
 import 'package:vaultwash/features/scan/presentation/affected_files_list.dart';
 import 'package:vaultwash/features/scan/presentation/scan_summary_card.dart';
+import 'package:vaultwash/features/scan/presentation/workspace_desktop_layout.dart';
 import 'package:vaultwash/features/scan/presentation/workspace_layout.dart';
 import 'package:vaultwash/features/settings/application/app_settings_controller.dart';
 import 'package:vaultwash/features/settings/presentation/settings_dialog.dart';
 import 'package:vaultwash/features/vault/application/vault_controller.dart';
 import 'package:vaultwash/features/vault/domain/vault_ref.dart';
 import 'package:vaultwash/features/vault/presentation/vault_selector.dart';
+import 'package:vaultwash/features/workspace/application/workspace_preferences_controller.dart';
 
 enum _CompactWorkspaceView { files, review }
 
@@ -43,11 +45,25 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
     final vaultState = ref.watch(vaultControllerProvider);
     final scanState = ref.watch(scanControllerProvider);
     final settings = ref.watch(appSettingsControllerProvider);
+    final workspacePreferences = ref.watch(
+      workspacePreferencesControllerProvider,
+    );
     final workspace = scanState.asData?.value ?? const ScanWorkspaceState();
     final currentVault = vaultState.asData?.value;
     final isBusy = workspace.isScanning || workspace.isCleaning;
     final settingsSummary =
         '${settings.createBackupsBeforeWrite ? 'Backups on' : 'Backups off'} • ${settings.appearanceMode.label} appearance';
+    final desktopCenterPane = _buildCenterPane(
+      context,
+      currentVault,
+      workspace,
+      workspacePreferences.summaryCollapsed,
+    );
+    final summaryPane = _buildSummaryPane(
+      workspace,
+      collapsed: workspacePreferences.summaryCollapsed,
+    );
+    final previewPane = _buildPreviewPane(workspace);
 
     return Scaffold(
       body: SafeArea(
@@ -70,24 +86,18 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
               stackActions: stackRailActions,
             );
 
-            final centerPane = _buildCenterPane(
-              context,
-              currentVault,
-              workspace,
-            );
             final filesPane = _buildFilesPane(
               context,
               currentVault,
               workspace,
               revealInspectorOnFocus: layout.usesCompactWorkspace,
             );
-            final previewPane = _buildPreviewPane(workspace);
 
             if (layout.showsTriPane) {
-              return _DesktopWorkspaceLayout(
+              return DesktopWorkspaceLayout(
                 layout: layout,
                 leftRail: leftRail,
-                centerPane: centerPane,
+                centerPane: desktopCenterPane,
                 previewPane: previewPane,
               );
             }
@@ -99,7 +109,7 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
               leftRailWidth: layout.leftRailWidth,
               contentGap: layout.contentGap,
               leftRail: leftRail,
-              summaryPane: _buildSummaryPane(workspace),
+              summaryPane: summaryPane,
               switcher: _CompactWorkspaceSwitcher(
                 currentView: _compactWorkspaceView,
                 workspace: workspace,
@@ -299,12 +309,21 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
     );
   }
 
-  Widget _buildSummaryPane(ScanWorkspaceState workspace) {
+  Widget _buildSummaryPane(
+    ScanWorkspaceState workspace, {
+    required bool collapsed,
+  }) {
     return ScanSummaryCard(
       summary: workspace.summary,
       statusMessage: workspace.statusMessage,
       errorMessage: workspace.errorMessage,
       lastScannedAt: workspace.lastScannedAt,
+      collapsed: collapsed,
+      onToggleCollapsed: () {
+        ref
+            .read(workspacePreferencesControllerProvider.notifier)
+            .toggleSummaryCollapsed();
+      },
     );
   }
 
@@ -359,11 +378,12 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
     BuildContext context,
     VaultRef? currentVault,
     ScanWorkspaceState workspace,
+    bool summaryCollapsed,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSummaryPane(workspace),
+        _buildSummaryPane(workspace, collapsed: summaryCollapsed),
         const SizedBox(height: AppSpacing.md),
         Expanded(
           child: _buildFilesPane(
@@ -528,38 +548,6 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
 
   String _executionSummary(CleanupExecutionResult result) {
     return '${result.successCount} files cleaned, ${result.skippedCount} skipped, ${result.failureCount} failed.';
-  }
-}
-
-class _DesktopWorkspaceLayout extends StatelessWidget {
-  const _DesktopWorkspaceLayout({
-    required this.layout,
-    required this.leftRail,
-    required this.centerPane,
-    required this.previewPane,
-  });
-
-  final WorkspaceLayoutSpec layout;
-  final Widget leftRail;
-  final Widget centerPane;
-  final Widget previewPane;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Row(
-        key: ValueKey('workspace-layout-${layout.variant.name}'),
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(width: layout.leftRailWidth, child: leftRail),
-          SizedBox(width: layout.contentGap),
-          Expanded(flex: layout.centerFlex, child: centerPane),
-          SizedBox(width: layout.contentGap),
-          Expanded(flex: layout.previewFlex, child: previewPane),
-        ],
-      ),
-    );
   }
 }
 

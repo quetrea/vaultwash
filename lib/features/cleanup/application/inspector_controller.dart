@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vaultwash/features/cleanup/domain/inspector_mode.dart';
+import 'package:vaultwash/features/workspace/application/workspace_preferences_controller.dart';
 
 final inspectorControllerProvider =
     NotifierProvider<InspectorController, InspectorState>(
@@ -32,11 +35,19 @@ class InspectorState {
 /// Controls inspection mode and match navigation for the review pane.
 class InspectorController extends Notifier<InspectorState> {
   @override
-  InspectorState build() => const InspectorState();
+  InspectorState build() {
+    final preferences = ref.read(workspacePreferencesControllerProvider);
+    return InspectorState(mode: preferences.inspectorMode);
+  }
 
   /// Switch the active inspection mode.
   void setMode(InspectorMode mode) {
     state = state.copyWith(mode: mode);
+    unawaited(
+      ref
+          .read(workspacePreferencesControllerProvider.notifier)
+          .setInspectorMode(mode),
+    );
   }
 
   /// Advance to the next match, wrapping around at the end.

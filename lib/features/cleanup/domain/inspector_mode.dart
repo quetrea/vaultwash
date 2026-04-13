@@ -8,10 +8,19 @@ enum InspectorMode {
   /// Compact inline diff highlighting exactly what changes.
   changes;
 
+  String get storageValue => name;
+
   String get label => switch (this) {
     InspectorMode.excerpts => 'Excerpts',
     InspectorMode.changes => 'Changes',
   };
+
+  static InspectorMode fromStorageValue(String? value) {
+    return InspectorMode.values.firstWhere(
+      (mode) => mode.storageValue == value,
+      orElse: () => InspectorMode.excerpts,
+    );
+  }
 }
 
 /// Decomposed inline diff between two strings.
@@ -72,8 +81,9 @@ class InlineDiff {
       prefix: original.substring(0, prefixLen),
       removed: original.substring(prefixLen, original.length - suffixLen),
       added: cleaned.substring(prefixLen, cleaned.length - suffixLen),
-      suffix:
-          suffixLen > 0 ? original.substring(original.length - suffixLen) : '',
+      suffix: suffixLen > 0
+          ? original.substring(original.length - suffixLen)
+          : '',
     );
   }
 }
