@@ -12,11 +12,21 @@ import 'package:vaultwash/features/scan/domain/scan_failure.dart';
 import 'package:vaultwash/features/scan/domain/scan_file_result.dart';
 import 'package:vaultwash/features/scan/presentation/affected_files_list.dart';
 import 'package:vaultwash/features/scan/presentation/scan_summary_card.dart';
+import 'package:vaultwash/features/scan/presentation/workspace_layout.dart';
 import 'package:vaultwash/features/settings/application/app_settings_controller.dart';
 import 'package:vaultwash/features/settings/presentation/settings_dialog.dart';
 import 'package:vaultwash/features/vault/application/vault_controller.dart';
 import 'package:vaultwash/features/vault/domain/vault_ref.dart';
 import 'package:vaultwash/features/vault/presentation/vault_selector.dart';
+
+enum _CompactWorkspaceView { files, review }
+
+extension on _CompactWorkspaceView {
+  String get label => switch (this) {
+    _CompactWorkspaceView.files => 'Files',
+    _CompactWorkspaceView.review => 'Review',
+  };
+}
 
 class WorkspaceScreen extends ConsumerStatefulWidget {
   const WorkspaceScreen({super.key});
@@ -26,6 +36,8 @@ class WorkspaceScreen extends ConsumerStatefulWidget {
 }
 
 class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
+  _CompactWorkspaceView _compactWorkspaceView = _CompactWorkspaceView.files;
+
   @override
   Widget build(BuildContext context) {
     final vaultState = ref.watch(vaultControllerProvider);
@@ -41,69 +53,85 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final isCompact = constraints.maxWidth < 1180;
-            final railHeight = constraints.maxHeight > AppSpacing.lg * 2
-                ? constraints.maxHeight - (AppSpacing.lg * 2)
-                : 0.0;
-            final isCondensedRail = !isCompact && railHeight < 760;
+            final layout = WorkspaceLayoutSpec.resolve(constraints.maxWidth);
+            final isShortDesktop = constraints.maxHeight < 780;
+            final isCondensedRail =
+                layout.usesCompactWorkspace || isShortDesktop;
+            final stackRailActions =
+                layout.variant != WorkspaceLayoutVariant.wide;
 
-            if (isCompact) {
-              return SingleChildScrollView(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildLeftRail(
-                      context: context,
-                      currentVault: currentVault,
-                      workspace: workspace,
-                      settingsSummary: settingsSummary,
-                      isBusy: isBusy,
-                      isCondensed: false,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    SizedBox(
-                      height: 620,
-                      child: _buildCenterPane(context, currentVault, workspace),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    SizedBox(height: 560, child: _buildPreviewPane(workspace)),
-                  ],
-                ),
+            final leftRail = _buildLeftRail(
+              context: context,
+              currentVault: currentVault,
+              workspace: workspace,
+              settingsSummary: settingsSummary,
+              isBusy: isBusy,
+              isCondensed: isCondensedRail,
+              stackActions: stackRailActions,
+            );
+
+            final centerPane = _buildCenterPane(
+              context,
+              currentVault,
+              workspace,
+            );
+            final filesPane = _buildFilesPane(
+              context,
+              currentVault,
+              workspace,
+              revealInspectorOnFocus: layout.usesCompactWorkspace,
+            );
+            final previewPane = _buildPreviewPane(workspace);
+
+            if (layout.showsTriPane) {
+              return _DesktopWorkspaceLayout(
+                layout: layout,
+                leftRail: leftRail,
+                centerPane: centerPane,
+                previewPane: previewPane,
               );
             }
 
-            return Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: 296,
-                    height: railHeight,
-                    child: _buildLeftRail(
-                      context: context,
-                      currentVault: currentVault,
-                      workspace: workspace,
-                      settingsSummary: settingsSummary,
-                      isBusy: isBusy,
-                      isCondensed: isCondensedRail,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    flex: 11,
-                    child: _buildCenterPane(context, currentVault, workspace),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(flex: 10, child: _buildPreviewPane(workspace)),
-                ],
+            final compactWorkspace = _CompactWorkspaceLayout(
+              layoutKey: layout.showsMinimumWidthFallback
+                  ? 'constrained-shell'
+                  : layout.variant.name,
+              leftRailWidth: layout.leftRailWidth,
+              contentGap: layout.contentGap,
+              leftRail: leftRail,
+              summaryPane: _buildSummaryPane(workspace),
+              switcher: _CompactWorkspaceSwitcher(
+                currentView: _compactWorkspaceView,
+                workspace: workspace,
+                onSelect: _setCompactWorkspaceView,
               ),
+              filesPane: filesPane,
+              previewPane: previewPane,
+              compactViewIndex: _compactWorkspaceView.index,
+            );
+
+            if (!layout.showsMinimumWidthFallback) {
+              return compactWorkspace;
+            }
+
+            return _MinimumWidthWorkspaceLayout(
+              minWidth: WorkspaceLayoutSpec.compactMinWidth,
+              child: compactWorkspace,
             );
           },
         ),
       ),
     );
+  }
+
+  void _setCompactWorkspaceView(_CompactWorkspaceView nextView) {
+    if (_compactWorkspaceView == nextView) {
+      return;
+    }
+
+    setState(() {
+      _compactWorkspaceView = nextView;
+    });
   }
 
   Widget _buildLeftRail({
@@ -113,128 +141,217 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
     required String settingsSummary,
     required bool isBusy,
     required bool isCondensed,
+    required bool stackActions,
   }) {
     final colors = context.appColors;
     final textTheme = Theme.of(context).textTheme;
     final executionSummary = workspace.lastExecutionResult == null
         ? null
         : _executionSummary(workspace.lastExecutionResult!);
-    final primarySection = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                AppStrings.appName,
-                style: textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            if (isCondensed)
-              IconButton(
-                onPressed: _openSettings,
-                tooltip: 'Settings',
-                icon: const Icon(Icons.tune_rounded, size: 18),
-              ),
-          ],
-        ),
-        SizedBox(height: isCondensed ? AppSpacing.xxs : AppSpacing.xs),
-        Text(
-          AppStrings.sidebarSubtitle,
-          maxLines: isCondensed ? 1 : 2,
-          overflow: TextOverflow.ellipsis,
-          style: textTheme.bodySmall?.copyWith(color: colors.textSecondary),
-        ),
-        if (!isCondensed) ...[
-          const SizedBox(height: AppSpacing.xxs),
-          Text(
-            AppStrings.shortDescription,
-            style: textTheme.bodySmall?.copyWith(color: colors.textMuted),
-          ),
-        ],
-        SizedBox(height: isCondensed ? AppSpacing.sm : AppSpacing.md),
-        _WorkspaceStatusStrip(
-          isBusy: isBusy,
-          statusMessage: workspace.statusMessage ?? AppStrings.tagline,
-          currentVault: currentVault,
-          affectedFiles: workspace.summary?.filesWithMatches ?? 0,
-          totalMatches: workspace.summary?.totalMatchesFound ?? 0,
-          lastScannedAt: workspace.lastScannedAt,
-          executionSummary: executionSummary,
-          settingsSummary: settingsSummary,
-        ),
-        SizedBox(height: isCondensed ? AppSpacing.md : AppSpacing.xl),
-        VaultSelector(
-          vault: currentVault,
-          isBusy: isBusy,
-          onPickVault: _handlePickVault,
-          onClearVault: _handleClearVault,
-          compact: isCondensed,
-        ),
-        SizedBox(height: isCondensed ? AppSpacing.md : AppSpacing.lg),
-        if (!isCondensed) ...[
-          Text(
-            'Scan',
-            style: textTheme.labelLarge?.copyWith(color: colors.textSecondary),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-        ],
-        AppButton(
-          label: workspace.isScanning ? 'Scanning…' : 'Scan vault',
-          icon: Icons.search_rounded,
-          onPressed: currentVault == null || isBusy ? null : _runScan,
-        ),
-        SizedBox(height: isCondensed ? AppSpacing.xs : AppSpacing.md),
-        if (!isCondensed) ...[
-          Text(
-            'After review',
-            style: textTheme.labelLarge?.copyWith(color: colors.textSecondary),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-        ],
-        Row(
-          children: [
-            Expanded(
-              child: AppButton(
-                label: workspace.isCleaning ? 'Cleaning…' : 'Clean selected',
-                icon: Icons.cleaning_services_outlined,
-                variant: AppButtonVariant.secondary,
-                onPressed: isBusy || workspace.selectedPaths.isEmpty
-                    ? null
-                    : _handleCleanSelected,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.xs),
-            Expanded(
-              child: AppButton(
-                label: 'Clean all affected',
-                icon: Icons.done_all_rounded,
-                variant: AppButtonVariant.secondary,
-                onPressed: isBusy || workspace.affectedFiles.isEmpty
-                    ? null
-                    : _handleCleanAll,
-              ),
-            ),
-          ],
-        ),
-        if (!isCondensed) ...[
-          const SizedBox(height: AppSpacing.sm),
-          AppButton(
-            label: 'Settings',
-            icon: Icons.tune_rounded,
-            variant: AppButtonVariant.ghost,
-            onPressed: _openSettings,
-          ),
-        ],
-      ],
-    );
 
     return AppSurfaceCard(
-      showShadow: true,
       backgroundColor: colors.sidebarSurface,
-      child: primarySection,
+      showShadow: true,
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    AppStrings.appName,
+                    style: textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                if (isCondensed)
+                  IconButton(
+                    onPressed: _openSettings,
+                    tooltip: 'Settings',
+                    icon: const Icon(Icons.tune_rounded, size: 18),
+                  ),
+              ],
+            ),
+            SizedBox(height: isCondensed ? AppSpacing.xxs : AppSpacing.xs),
+            Text(
+              AppStrings.sidebarSubtitle,
+              maxLines: isCondensed ? 1 : 2,
+              overflow: TextOverflow.ellipsis,
+              style: textTheme.bodySmall?.copyWith(color: colors.textSecondary),
+            ),
+            if (!isCondensed) ...[
+              const SizedBox(height: AppSpacing.xxs),
+              Text(
+                AppStrings.shortDescription,
+                style: textTheme.bodySmall?.copyWith(color: colors.textMuted),
+              ),
+            ],
+            SizedBox(height: isCondensed ? AppSpacing.sm : AppSpacing.md),
+            _WorkspaceStatusStrip(
+              isBusy: isBusy,
+              statusMessage: workspace.statusMessage ?? AppStrings.tagline,
+              currentVault: currentVault,
+              affectedFiles: workspace.summary?.filesWithMatches ?? 0,
+              totalMatches: workspace.summary?.totalMatchesFound ?? 0,
+              lastScannedAt: workspace.lastScannedAt,
+              executionSummary: executionSummary,
+              settingsSummary: settingsSummary,
+            ),
+            SizedBox(height: isCondensed ? AppSpacing.md : AppSpacing.xl),
+            VaultSelector(
+              vault: currentVault,
+              isBusy: isBusy,
+              onPickVault: _handlePickVault,
+              onClearVault: _handleClearVault,
+              compact: isCondensed,
+            ),
+            SizedBox(height: isCondensed ? AppSpacing.md : AppSpacing.lg),
+            if (!isCondensed) ...[
+              Text(
+                'Scan',
+                style: textTheme.labelLarge?.copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+            ],
+            AppButton(
+              label: workspace.isScanning ? 'Scanning…' : 'Scan vault',
+              icon: Icons.search_rounded,
+              onPressed: currentVault == null || isBusy ? null : _runScan,
+            ),
+            SizedBox(height: isCondensed ? AppSpacing.xs : AppSpacing.md),
+            if (!isCondensed) ...[
+              Text(
+                'After review',
+                style: textTheme.labelLarge?.copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+            ],
+            if (stackActions)
+              Column(
+                children: [
+                  AppButton(
+                    label: workspace.isCleaning
+                        ? 'Cleaning…'
+                        : 'Clean selected',
+                    icon: Icons.cleaning_services_outlined,
+                    variant: AppButtonVariant.secondary,
+                    onPressed: isBusy || workspace.selectedPaths.isEmpty
+                        ? null
+                        : _handleCleanSelected,
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  AppButton(
+                    label: 'Clean all affected',
+                    icon: Icons.done_all_rounded,
+                    variant: AppButtonVariant.secondary,
+                    onPressed: isBusy || workspace.affectedFiles.isEmpty
+                        ? null
+                        : _handleCleanAll,
+                  ),
+                ],
+              )
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: AppButton(
+                      label: workspace.isCleaning
+                          ? 'Cleaning…'
+                          : 'Clean selected',
+                      icon: Icons.cleaning_services_outlined,
+                      variant: AppButtonVariant.secondary,
+                      onPressed: isBusy || workspace.selectedPaths.isEmpty
+                          ? null
+                          : _handleCleanSelected,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: AppButton(
+                      label: 'Clean all affected',
+                      icon: Icons.done_all_rounded,
+                      variant: AppButtonVariant.secondary,
+                      onPressed: isBusy || workspace.affectedFiles.isEmpty
+                          ? null
+                          : _handleCleanAll,
+                    ),
+                  ),
+                ],
+              ),
+            if (!isCondensed) ...[
+              const SizedBox(height: AppSpacing.sm),
+              AppButton(
+                label: 'Settings',
+                icon: Icons.tune_rounded,
+                variant: AppButtonVariant.ghost,
+                onPressed: _openSettings,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryPane(ScanWorkspaceState workspace) {
+    return ScanSummaryCard(
+      summary: workspace.summary,
+      statusMessage: workspace.statusMessage,
+      errorMessage: workspace.errorMessage,
+      lastScannedAt: workspace.lastScannedAt,
+    );
+  }
+
+  Widget _buildFilesPane(
+    BuildContext context,
+    VaultRef? currentVault,
+    ScanWorkspaceState workspace, {
+    required bool revealInspectorOnFocus,
+  }) {
+    return AppSurfaceCard(
+      key: const ValueKey('workspace-files-pane'),
+      showShadow: true,
+      child: currentVault == null
+          ? const EmptyStateView(
+              eyebrow: 'Affected files',
+              title: 'Choose a vault to start scanning',
+              message:
+                  'Pick an Obsidian vault in the left rail, run a scan, and review every affected file before VaultWash writes anything.',
+              icon: Icons.folder_copy_outlined,
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: AffectedFilesList(
+                    files: workspace.affectedFiles,
+                    selectedPaths: workspace.selectedPaths,
+                    focusedRelativePath: workspace.focusedRelativePath,
+                    onFocusFile: (relativePath) {
+                      ref
+                          .read(scanControllerProvider.notifier)
+                          .focusFile(relativePath);
+                      if (revealInspectorOnFocus) {
+                        _setCompactWorkspaceView(_CompactWorkspaceView.review);
+                      }
+                    },
+                    onToggleSelection: ref
+                        .read(scanControllerProvider.notifier)
+                        .toggleSelection,
+                  ),
+                ),
+                if (workspace.failures.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  _FailureSection(failures: workspace.failures),
+                ],
+              ],
+            ),
     );
   }
 
@@ -246,46 +363,14 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ScanSummaryCard(
-          summary: workspace.summary,
-          statusMessage: workspace.statusMessage,
-          errorMessage: workspace.errorMessage,
-          lastScannedAt: workspace.lastScannedAt,
-        ),
+        _buildSummaryPane(workspace),
         const SizedBox(height: AppSpacing.md),
         Expanded(
-          child: AppSurfaceCard(
-            showShadow: true,
-            child: currentVault == null
-                ? const EmptyStateView(
-                    eyebrow: 'Affected files',
-                    title: 'Choose a vault to start scanning',
-                    message:
-                        'Pick an Obsidian vault in the left rail, run a scan, and review every affected file before VaultWash writes anything.',
-                    icon: Icons.folder_copy_outlined,
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: AffectedFilesList(
-                          files: workspace.affectedFiles,
-                          selectedPaths: workspace.selectedPaths,
-                          focusedRelativePath: workspace.focusedRelativePath,
-                          onFocusFile: ref
-                              .read(scanControllerProvider.notifier)
-                              .focusFile,
-                          onToggleSelection: ref
-                              .read(scanControllerProvider.notifier)
-                              .toggleSelection,
-                        ),
-                      ),
-                      if (workspace.failures.isNotEmpty) ...[
-                        const SizedBox(height: AppSpacing.md),
-                        _FailureSection(failures: workspace.failures),
-                      ],
-                    ],
-                  ),
+          child: _buildFilesPane(
+            context,
+            currentVault,
+            workspace,
+            revealInspectorOnFocus: false,
           ),
         ),
       ],
@@ -293,12 +378,10 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
   }
 
   Widget _buildPreviewPane(ScanWorkspaceState workspace) {
-    return SizedBox(
-      height: double.infinity,
-      child: AppSurfaceCard(
-        showShadow: true,
-        child: PreviewPanel(fileResult: workspace.focusedFile),
-      ),
+    return AppSurfaceCard(
+      key: const ValueKey('workspace-preview-pane'),
+      showShadow: true,
+      child: PreviewPanel(fileResult: workspace.focusedFile),
     );
   }
 
@@ -445,6 +528,282 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
 
   String _executionSummary(CleanupExecutionResult result) {
     return '${result.successCount} files cleaned, ${result.skippedCount} skipped, ${result.failureCount} failed.';
+  }
+}
+
+class _DesktopWorkspaceLayout extends StatelessWidget {
+  const _DesktopWorkspaceLayout({
+    required this.layout,
+    required this.leftRail,
+    required this.centerPane,
+    required this.previewPane,
+  });
+
+  final WorkspaceLayoutSpec layout;
+  final Widget leftRail;
+  final Widget centerPane;
+  final Widget previewPane;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Row(
+        key: ValueKey('workspace-layout-${layout.variant.name}'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(width: layout.leftRailWidth, child: leftRail),
+          SizedBox(width: layout.contentGap),
+          Expanded(flex: layout.centerFlex, child: centerPane),
+          SizedBox(width: layout.contentGap),
+          Expanded(flex: layout.previewFlex, child: previewPane),
+        ],
+      ),
+    );
+  }
+}
+
+class _CompactWorkspaceLayout extends StatelessWidget {
+  const _CompactWorkspaceLayout({
+    required this.layoutKey,
+    required this.leftRailWidth,
+    required this.contentGap,
+    required this.leftRail,
+    required this.summaryPane,
+    required this.switcher,
+    required this.filesPane,
+    required this.previewPane,
+    required this.compactViewIndex,
+  });
+
+  final String layoutKey;
+  final double leftRailWidth;
+  final double contentGap;
+  final Widget leftRail;
+  final Widget summaryPane;
+  final Widget switcher;
+  final Widget filesPane;
+  final Widget previewPane;
+  final int compactViewIndex;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Row(
+        key: ValueKey('workspace-layout-$layoutKey'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(width: leftRailWidth, child: leftRail),
+          SizedBox(width: contentGap),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                summaryPane,
+                const SizedBox(height: AppSpacing.md),
+                switcher,
+                const SizedBox(height: AppSpacing.sm),
+                Expanded(
+                  child: ClipRect(
+                    child: IndexedStack(
+                      index: compactViewIndex,
+                      sizing: StackFit.expand,
+                      children: [filesPane, previewPane],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CompactWorkspaceSwitcher extends StatelessWidget {
+  const _CompactWorkspaceSwitcher({
+    required this.currentView,
+    required this.workspace,
+    required this.onSelect,
+  });
+
+  final _CompactWorkspaceView currentView;
+  final ScanWorkspaceState workspace;
+  final ValueChanged<_CompactWorkspaceView> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      key: const ValueKey('workspace-compact-switcher'),
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: colors.surfaceMuted,
+        borderRadius: AppRadius.md,
+        border: Border.all(color: colors.border),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final controls = SegmentedButton<_CompactWorkspaceView>(
+            key: const ValueKey('workspace-compact-switcher-control'),
+            showSelectedIcon: false,
+            style: const ButtonStyle(
+              visualDensity: VisualDensity.compact,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            segments: _CompactWorkspaceView.values
+                .map(
+                  (view) => ButtonSegment<_CompactWorkspaceView>(
+                    value: view,
+                    label: Text(view.label),
+                  ),
+                )
+                .toList(),
+            selected: {currentView},
+            onSelectionChanged: (selection) => onSelect(selection.first),
+          );
+
+          final message = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Workspace',
+                style: textTheme.labelLarge?.copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xxs),
+              Text(
+                _summaryLine(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: textTheme.bodySmall?.copyWith(color: colors.textMuted),
+              ),
+            ],
+          );
+
+          if (constraints.maxWidth < 620) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                message,
+                const SizedBox(height: AppSpacing.sm),
+                controls,
+              ],
+            );
+          }
+
+          return Row(
+            children: [
+              Expanded(child: message),
+              const SizedBox(width: AppSpacing.md),
+              controls,
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  String _summaryLine() {
+    final focusedFile = workspace.focusedFile;
+
+    if (currentView == _CompactWorkspaceView.review) {
+      return focusedFile == null
+          ? 'Select a file from the review queue to inspect excerpts and changes.'
+          : 'Inspecting ${focusedFile.relativePath}';
+    }
+
+    if (workspace.affectedFiles.isEmpty) {
+      return 'Affected files stay review-ready here without leaving the desktop workspace.';
+    }
+
+    if (focusedFile == null) {
+      return '${workspace.affectedFiles.length} files are ready for review.';
+    }
+
+    return '${workspace.affectedFiles.length} files ready • ${focusedFile.relativePath} selected';
+  }
+}
+
+class _MinimumWidthWorkspaceLayout extends StatelessWidget {
+  const _MinimumWidthWorkspaceLayout({
+    required this.child,
+    required this.minWidth,
+  });
+
+  final Widget child;
+  final double minWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      key: const ValueKey('workspace-layout-constrained'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.lg,
+            AppSpacing.lg,
+            AppSpacing.sm,
+          ),
+          child: _MinimumWidthNotice(),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.fromLTRB(
+              0,
+              0,
+              AppSpacing.lg,
+              AppSpacing.lg,
+            ),
+            child: SizedBox(width: minWidth, child: child),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MinimumWidthNotice extends StatelessWidget {
+  const _MinimumWidthNotice();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+
+    return AppSurfaceCard(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.sm,
+      ),
+      backgroundColor: colors.surfaceMuted,
+      child: Row(
+        children: [
+          Icon(
+            Icons.desktop_windows_outlined,
+            size: 18,
+            color: colors.textSecondary,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              'VaultWash is tuned for desktop widths of 960 px or wider. Widen the window or scroll horizontally to keep the full review workspace visible.',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -621,7 +980,7 @@ class _FailureSection extends StatelessWidget {
           ),
           if (failures.length > visibleFailures.length)
             Text(
-              'Plus ${failures.length - visibleFailures.length} more unreadable files.',
+              '+${failures.length - visibleFailures.length} more',
               style: Theme.of(
                 context,
               ).textTheme.bodySmall?.copyWith(color: colors.textMuted),
